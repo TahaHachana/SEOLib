@@ -2,25 +2,27 @@
 #r "C:\Users\user\Desktop\google-api-dotnet-client-1.1.4344-beta.binary\Lib\Google.Apis.dll"
 
 #load "Types.fs"
-#load "Helpers.fs"
+#load "Utilities.fs"
+#load "StopWords.fs"
 #load "Keywords.fs"
 #load "PageSpeed.fs"
+#load "HTML.fs"
 #load "Links.fs"
 #load "Robots.fs"
 #load "Crawler.fs"
 #load "Violations.fs"
-#load "HTML.fs"
 
 open System
 open System.Net
-open Helpers
-open Keywords
-open PageSpeed
-open Links
-open Robots
-open Crawler
-open Violations
-open HTML
+open SEOLib.Types
+open SEOLib.Utilities
+open SEOLib.Keywords
+open SEOLib.PageSpeed
+open SEOLib.Links
+open SEOLib.Robots
+open SEOLib.Crawler
+open SEOLib.Violations
+open SEOLib.HTML
 
 //============================
 // Keywords
@@ -29,11 +31,7 @@ open HTML
 let client = new WebClient()
 let html = client.DownloadString "http://en.wikipedia.org/wiki/Bicycle_gearing"
 let html' = cleanHtml html
-//let stopWords = loadStopWords English
-let stopWords =
-    client.DownloadString "https://raw.github.com/TahaHachana/SEOLib/master/SRC/englishStopWords.txt"
-    |> (fun x -> x.Split([|'\n'|], StringSplitOptions.RemoveEmptyEntries))
-    |> Array.toList
+let stopWords = loadStopWords English
 
 let html'' = removeStopWords html' stopWords
 
