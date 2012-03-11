@@ -1,136 +1,135 @@
-﻿module Types
+﻿namespace SEOLib
 
 open System
 open Google.Apis.Pagespeedonline.v1.Data
 
-[<AutoOpenAttribute>]
-module CrawlerTypes =
+module Types =
 
-    type Message =
-        | Cancel
-        | Done
-        | Mailbox of MailboxProcessor<Message>
-        | Stop
-        | URL     of string option
+    [<AutoOpenAttribute>]
+    module CrawlerTypes =
 
-    type Agent = MailboxProcessor<Message>
+        type Message =
+            | Cancel
+            | Done
+            | Mailbox of MailboxProcessor<Message>
+            | Stop
+            | URL     of string option
 
-[<AutoOpenAttribute>]
-module KeywordsTypes =
+        type Agent = MailboxProcessor<Message>
 
-    type Language =
-        | English
-        | French
+    [<AutoOpenAttribute>]
+    module KeywordsTypes =
 
-[<AutoOpenAttribute>]
-module LinksTypes =
+        type Language =
+            | English
+            | French
 
-    type WebPage =
-        {
-            ResponseUri : Uri option
-            HTML : string
-            Headers : (string * string) list
-            NoFollow : bool
-        }
+    [<AutoOpenAttribute>]
+    module LinksTypes =
 
-[<AutoOpenAttribute>]
-module PageSpeedTypes =
+        type WebPage =
+            {
+                ResponseUri : Uri option
+                HTML        : string
+                Headers     : (string * string) list
+                NoFollow    : bool
+            }
 
-    type PSD  = Result.PageStatsData
+    [<AutoOpenAttribute>]
+    module PageSpeedTypes =
 
-    type RRDS = Result.FormattedResultsData.RuleResultsData.RuleResultsDataSchema
+        type PSD  = Result.PageStatsData
 
-    type UBD  = Result.FormattedResultsData.RuleResultsData.RuleResultsDataSchema
-                      .UrlBlocksData
+        type RRDS = Result.FormattedResultsData.RuleResultsData.RuleResultsDataSchema
 
-    type RD   = Result.FormattedResultsData.RuleResultsData.RuleResultsDataSchema
-                      .UrlBlocksData
-                      .UrlsData.ResultData
+        type UBD  = RRDS.UrlBlocksData
 
-    type RuleResult =
-        {
-            RuleName   : string
-            RuleImpact : float option
-            RuleScore  : int
-            Blocks     : UBD []
-        }
+        type RD   = UBD.UrlsData.ResultData
 
-    type RuleData =
-        {
-            RuleName : string
-            Impact   : float option
-            Heading  : string
-            Data     : string []
-        }
+        type RuleResult =
+            {
+                RuleName   : string
+                RuleImpact : float option
+                RuleScore  : int
+                Blocks     : UBD []
+            }
 
-[<AutoOpenAttribute>]
-module RobotsTypes =
+        type RuleData =
+            {
+                RuleName : string
+                Impact   : float option
+                Heading  : string
+                Data     : string []
+            }
 
-    type Bot =
-        {
-            Name : string
-            CrawlDealy : float option
-            Allow : string list
-            Disallow : string list
-        }
+    [<AutoOpenAttribute>]
+    module RobotsTypes =
 
-    type Permission = Allowed | Disallowed
+        type Bot =
+            {
+                Name       : string
+                CrawlDealy : float option
+                Allow      : string list
+                Disallow   : string list
+            }
 
-[<AutoOpenAttribute>]
-module ViolationsTypes =
+        type Permission = Allowed | Disallowed
 
-    type ViolationLevel =
-        | Error
-        | Information
-        | Warning
+    [<AutoOpenAttribute>]
+    module ViolationsTypes =
 
-    type ViolationCategory =
-        | Content
-        | Performance
-        | SEO
-        | Standards
+        type ViolationLevel =
+            | Error
+            | Information
+            | Warning
 
-    type ViolationCode =
-        | AltEmpty
-        | AltMissing
-        | DescriptionEmpty
-        | DescriptionLong
-        | DescriptionMissing
-        | DescriptionMultiple
-        | DescriptionShort
-        | H1Empty
-        | H1Missing
-        | H1Multiple
-        | InvalidMarkup
-        | LargeInlineCss
-        | LargeInlineScript
-        | NoIndex
-        | QueryStringParameterCount
-        | TitleAndDescriptionEquals
-        | TitleEmpty
-        | TitleLong
-        | TitleMissing
-        | TitleShort
-        | TooManyLinks
-        | UseOfRefreshToRedirect
+        type ViolationCategory =
+            | Content
+            | Performance
+            | SEO
+            | Standards
 
-    type MarkupStatus =
-        | Abort
-        | Invalid of string * string
-        | Valid
+        type ViolationCode =
+            | AltEmpty
+            | AltMissing
+            | DescriptionEmpty
+            | DescriptionLong
+            | DescriptionMissing
+            | DescriptionMultiple
+            | DescriptionShort
+            | H1Empty
+            | H1Missing
+            | H1Multiple
+            | InvalidMarkup
+            | LargeInlineCss
+            | LargeInlineScript
+            | NoIndex
+            | QueryStringParameterCount
+            | TitleAndDescriptionEquals
+            | TitleEmpty
+            | TitleLong
+            | TitleMissing
+            | TitleShort
+            | TooManyLinks
+            | UseOfRefreshToRedirect
 
-    type Violation =
-        {
-            Category       : ViolationCategory
-            Code           : ViolationCode
-            Description    : string
-            Heading        : string
-            Level          : ViolationLevel
-            Recommendation : string
-        }
+        type MarkupStatus =
+            | Abort
+            | Invalid of string * string
+            | Valid
 
-    type Violation' =
-        {
-            V     : Violation
-            Index : int option
-        }
+        type Violation =
+            {
+                Category       : ViolationCategory
+                Code           : ViolationCode
+                Description    : string
+                Heading        : string
+                Level          : ViolationLevel
+                Recommendation : string
+            }
+
+        type Violation' =
+            {
+                V     : Violation
+                Index : int option
+            }
