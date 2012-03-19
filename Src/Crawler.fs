@@ -6,9 +6,9 @@ open System.Collections.Generic
 open System.IO
 open System.Net
 open System.Text.RegularExpressions
-open Robots
-open Types
-open Utilities
+open SEOLib.Robots
+open SEOLib.Types
+open SEOLib.Utilities
 
 module Crawler =
 
@@ -101,6 +101,14 @@ module Crawler =
                     }
             loop())
 
+    let spawnCanceler (supervisor : Agent) =
+        Agent.Start(fun inbox ->
+            async {
+                let! msg = inbox.Receive()
+                supervisor.Post Cancel
+                (inbox :> IDisposable).Dispose()
+                })
+
     let crawl (url : string) limit f g =
         let bot = catchAllBot url
         let h = isAllowed bot
@@ -110,5 +118,7 @@ module Crawler =
         let supervisor = spawnSupervisor set limit q f
         let urlCollector = spawnUrlCollector q supervisor
         let crawlers = [1 .. Gate] |> List.map (fun x -> spawnCrawler x host urlCollector supervisor h g)
+        let canceler = spawnCanceler supervisor
         crawlers.Head.Post <| URL(Some url)
         crawlers.Tail |> List.iter (fun agent -> agent.Post <| URL None)
+        canceler
