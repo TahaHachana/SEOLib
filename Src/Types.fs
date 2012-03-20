@@ -15,7 +15,9 @@ module Types =
             | Stop
             | URL     of string option
 
-        type Agent = MailboxProcessor<Message>
+        type Agent<'T> = MailboxProcessor<'T>
+
+        type MessageAgent = Agent<Message>
 
     [<AutoOpenAttribute>]
     module KeywordsTypes =
