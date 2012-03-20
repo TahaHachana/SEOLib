@@ -16,8 +16,12 @@ module Crawler =
     let Gate = 5
 
     let processMsg (hashset : HashSet<string>) limit (q : ConcurrentQueue<string>) run (mailbox : Agent) =
-        let count = hashset.Count
-        let keepRunning = count < limit - 1 && run
+        let keepRunning =
+            match limit with
+            | Some limit' ->
+                let count = hashset.Count
+                count < limit' - 1 && run
+            | None        -> run
         match keepRunning with
             | true ->
                 let url = q.TryDequeue()
