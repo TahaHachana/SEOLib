@@ -3,9 +3,9 @@
 open System
 open System.Net
 open System.Text.RegularExpressions
-open HTML
-open Types
-open Utilities
+open SEOLib.HTML
+open SEOLib.Types
+open SEOLib.Utilities
 
 module Violations =
 
@@ -39,7 +39,7 @@ module Violations =
     let descriptionEmptyDesc       = "The <meta name=\"description\" /> tag does not have any content. The description meta tag is used to provide a short description of the page content."
     let descriptionLongDesc        = "The content within the <meta name=\"description\"> tag is too long ({0} characters). The description must not exceed 150 characters."
     let descriptionMissingDesc     = "The page markup does not have the <meta name=\"description\" /> tag."
-    let descriptionMultipleDesc    = "The page markup has %d <meta name=\"description\" /> tag."
+    let descriptionMultipleDesc    = "The page markup has {0} <meta name=\"description\" /> tag."
     let descriptionShortDesc       = "The content in the <meta name=\"description\"> tag is too short ({0} characters). The description must be at least 25 characters long."
     let h1EmptyDesc                = "An <h1> tag is an indicator of what the page content is about."
     let h1MissingDesc              = h1EmptyDesc
@@ -48,7 +48,7 @@ module Violations =
     let largeInlineCssDesc         = "The page contains a large block of embedded Cascading Style Sheet (CSS) code ({0} characters). Search engines will ignore CSS code, but large quantities of CSS code that precede the actual text content of the page will force the text content further down in the HTML."
     let largeInlineScriptDesc      = "The page contains a large block of embedded script code ({0} characters). Search engines will ignore script code, but large quantities of script will force the actual text content of the page further down in the HTML."
     let noIndexDesc                = "The page content at this URL has not been analyzed because it's disallowed for indexing."
-    let queryParameterCountDesc    = "The URL has %d query string parameters. Most search engines will analyze up to four URL parameters and ignore any additional parameters."
+    let queryParameterCountDesc    = "The URL has {0} query string parameters. Most search engines will analyze up to four URL parameters and ignore any additional parameters."
     let titleEqualsDescriptionDesc = "The <title> and the <meta name=\"description\"> tags of the page contain identical text."
     let titleEmptyDesc             = "The <title> tag of the page is empty. An inaccurate or irrelevant title can affect how the content of the page is indexed, ranked, and presented by search engines."
     let titleLongDesc              = "The text in the <title> tag is too long ({0} characters). The title must not exceed 65 characters, including spaces. Most search engines will truncate the text in the <title> tag after a fixed number of characters."
@@ -355,7 +355,8 @@ module Violations =
             let metaDescCount = desc.Length
             let arr =
                 match metaDescCount with
-                    | _ when metaDescCount > 1 -> [| constructViolation descriptionMultiple None |]
+                    | _ when metaDescCount > 1 ->
+                        [| constructViolation' descriptionMultiple None descriptionMultipleDesc metaDescContent |]
                     | _ when metaDescCount = 0 -> [| constructViolation descriptionMissing  None |]
                     | _ ->
                         let metaDesc, index = desc.[0]
