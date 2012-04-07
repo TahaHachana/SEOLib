@@ -1,6 +1,7 @@
 ﻿namespace SEOLib
 
 open System
+open System.Net.Http.Headers
 open Google.Apis.Pagespeedonline.v1.Data
 
 module Types =
@@ -19,23 +20,14 @@ module Types =
 
         type MessageAgent = Agent<Message>
 
+        type RogueMode = ON | OFF
+
     [<AutoOpenAttribute>]
     module KeywordsTypes =
 
         type Language =
             | English
             | French
-
-    [<AutoOpenAttribute>]
-    module LinksTypes =
-
-        type WebPage =
-            {
-                ResponseUri : Uri option
-                HTML        : string
-                Headers     : (string * string) list
-                NoFollow    : bool
-            }
 
     [<AutoOpenAttribute>]
     module PageSpeedTypes =
@@ -76,6 +68,22 @@ module Types =
             }
 
         type Permission = Allowed | Disallowed
+
+        type Follow = DoFollow | NoFollow
+
+        type RobotsDirectives =
+            {
+                Indexing  : Permission
+                Following : Follow
+            }
+
+        type WebPage =
+            {
+                Url     : string
+                Headers : HttpResponseHeaders
+                Html    : string
+                Robots  : RobotsDirectives
+            }
 
     [<AutoOpenAttribute>]
     module ViolationsTypes =
