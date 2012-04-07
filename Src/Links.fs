@@ -3,134 +3,48 @@
 open System
 open System.IO
 open System.Net
+open System.Net.Http
+open System.Net.Http.Headers
 open System.Text.RegularExpressions
 open HTML
 open Types
 open Utilities
+open Http
 
 module Links =
 
-    /// Filters X-Robots-Tag headers in a Web response headers collection.
-    let filterXRobotsTag headers =
-        headers
-        |> List.filter (fun x -> fst x = "X-Robots-Tag")
-        |> function
-            | [] -> []
-            | lst -> lst |> List.map snd
-
-    /// Returns the robots meta tag if it exists in an HTML string.
-    let tryFindMetaRobots html =
-        metaTags' html
-        |> List.tryFind metaRobotsRegex.IsMatch
-
-    /// Process X-Robots-Tag headers.
-    // If multiple X-Robots-Tag directives are combined
-    // we keep only those specific to googlebot.
-    // If googlebot is not specified we keep only the
-    // directives that don't specify a user-agent.
-    let xRobotsTagData headers =
-        let length = List.length headers
-        match length with
-            | 0 -> None
-            | 1 -> Some headers
-            | _ ->
-                headers
-                |> List.filter (fun x -> googleBotRegex.IsMatch x)
-                |> function
-                    | [] ->
-                        headers
-                        |> List.filter (fun x -> userAgentRegex.IsMatch x = false)
-                        |> function
-                            | []  -> None
-                            | lst -> Some lst
-                    | lst -> Some lst
-
-    /// Determines wether a robots directives list contains a regex match.
-    let matchesPattern lst (directiveRegex : Regex) =
-        lst
-        |> List.tryFind directiveRegex.IsMatch
-        |> function None -> false | Some _ -> true
-
-    let constructWebPage responseUri html headers isNoFollow =
-        Some
-            {
-                ResponseUri = responseUri
-                HTML = html
-                Headers = headers
-                NoFollow = isNoFollow
-            }
-
-    /// Reads a Web response and returns a WebPage.
-    let readWebResponse (response : WebResponse) lst headers isNoIndex =
-        try
-            let responseUri = response.ResponseUri |> Some
-            use stream      = response.GetResponseStream()
-            use reader      = new StreamReader(stream)
-            let html        = reader.ReadToEnd()
-            let robotsMeta  = tryFindMetaRobots html
-            match robotsMeta with
-                | Some meta ->
-                    let isNoIndex  = matchesPattern [meta] noIndexRegex
-                    let isNoFollow = matchesPattern [meta] noFollowRegex
-                    match isNoIndex with
-                        | true  ->
-                            constructWebPage None html headers isNoFollow
-                        | false ->
-                            constructWebPage responseUri html headers isNoFollow
-                | None ->
-                    let responseUri' = isNoIndex |> function true -> None | false -> responseUri 
-                    let isNoFollow   = matchesPattern lst noFollowRegex
-                    constructWebPage responseUri' html headers isNoFollow
-        with _ -> None
-
-    /// Returns a WebPage option for a Web response.
-    let webPage directives response headers =
-        match isHtml response with
-            | false -> None
-            | true  ->
-                matchesPattern directives noneRegex |> function
-                    | true -> None
-                    | false ->
-                        matchesPattern directives noIndexRegex |> function
-                            | true  -> readWebResponse response directives headers true
-                            | false -> readWebResponse response directives headers false
-
-    /// Fetches the content of a url and returns a WebPage option.
-    let fetchUrl url =
-        let request  = createWebRequest url
-        let response = request.GetResponse()
-        let headers  = headersData response
-        filterXRobotsTag headers
-        |> xRobotsTagData
-        |> function
-            | Some lst -> webPage lst response headers
-            | None     -> webPage [] response headers
+    let relAttributeContent anchor =
+        relAttributeRegex.Match(anchor).Groups.[2].Value
+        |> (fun x -> x.Split([|','|], StringSplitOptions.RemoveEmptyEntries))
+        |> List.ofArray
+        |> List.map (fun x -> x.Trim())
 
     /// Matches <a> tags in an HTML string.
-    let anchors html =
+    let scrapeUris html =
         anchorRegex.Matches html
         |> Seq.cast<Match>
         |> Seq.toList
         |> List.map (fun x -> x.Value)
-        |> List.filter (fun x -> noFollowRegex.IsMatch x = false)
+        |> List.map (fun x -> x, relAttributeContent x)
+        |> List.map (fun (anchor, rel) ->
+            let href = hrefRegex.Match(anchor).Groups.[2].Value
+            let follow =
+                rel
+                |> List.tryFind (fun x -> noFollowRegex.IsMatch x)
+                |> function Some _ -> NoFollow | None -> DoFollow
+            href, follow)
 
-    /// Matches the values of the href attribute in anchor tags.
-    let hrefs anchors =
-        anchors
-        |> List.map (fun x -> hrefRegex.Match(x).Groups.[2].Value)
-        |> List.filter (fun x -> x <> "")
-
-    let scrapeUris = anchors >> hrefs
-
-    let partitionUris uris = uris |> List.partition (fun x -> absoluteUriRegex.IsMatch x)
+    let partitionUris uris = uris |> List.partition (fun (href, follow) -> absoluteUriRegex.IsMatch href)
 
     let formatRelativeUris relativeUris host =
         relativeUris
-        |> List.map (fun x ->
-            let m = Regex("^/").IsMatch x
-            match m with
-                | true -> Regex("^/").Replace(x, "") |> (fun x -> "http://" + x)
-                | false -> "http://" + host + "/" + x)
+        |> List.map (fun (href, follow) ->
+            let href' =
+                let m = Regex("^/").IsMatch href
+                match m with
+                    | true -> Regex("^/").Replace(href, "") |> (fun x -> "http://" + x)
+                    | false -> "http://" + host + "/" + href
+            href', follow)
 
     /// Scrapes links from an HTML string optionally retaining only internal ones.
     let scrapeLinks host html onlyInternal =
@@ -142,24 +56,16 @@ module Links =
         let allLinks =
             absoluteUris
             |> List.append relativeUris'
-            |> List.map (fun x -> Uri(x).ToString())
-            |> Seq.distinct
+            |> List.map (fun (href, follow)  -> Uri(href).ToString(), follow)
+            |> Seq.distinctBy fst
             |> Seq.toList
         match onlyInternal with
             | false -> allLinks
             | true  ->
                 let regex = compileRegex host
-                allLinks |> List.filter regex.IsMatch
+                allLinks |> List.filter (fun (href, _) -> regex.IsMatch href)
 
     /// Collects links from the given Web page.
-    let collectLinks onlyInternal url host =
-        let webPage = fetchUrl url
-        match webPage with
-            | Some webPage' ->
-                let isNoFollow = webPage'.NoFollow
-                match isNoFollow with
-                    | true  -> []
-                    | false ->
-                        let html = webPage'.HTML
-                        scrapeLinks host html onlyInternal
-            | None -> []
+    let collectLinks host (webPage : WebPage) onlyInternal =
+        let html = webPage.Html
+        scrapeLinks host html onlyInternal
