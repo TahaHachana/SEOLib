@@ -2,7 +2,10 @@
 
 open System
 open System.Net
+open System.Net.Http.Headers
 open System.Text.RegularExpressions
+open HTML
+open Http
 open Types
 open Utilities
 
@@ -63,12 +66,12 @@ module Robots =
     /// Determines if a URL is alowed for crawling.
     let isAllowed bot url =
         match bot with
-            | None -> true
+            | None -> Allowed
             | Some bot' ->
                 let disallowed = bot'.Disallow
                 let emptyDisallow = disallowed.IsEmpty
                 match emptyDisallow with
-                    | true  -> true
+                    | true  -> Allowed
                     | false ->
                         let disallowed' = disallowed |> List.map (fun x -> Disallowed, x)
                         let allowed     = bot'.Allow  |> List.map (fun x -> Allowed   , x)
@@ -80,12 +83,11 @@ module Robots =
                         directives
                         |> List.filter (fun (_, regex, _) -> regex.IsMatch(url))
                         |> function
-                            | [] -> true
+                            | [] -> Allowed
                             | lst ->
                                 lst
                                 |> List.maxBy (fun (_, _, length) -> length)
                                 |> (fun (permission, _, _) -> permission)
-                                |> function Allowed -> true | Disallowed -> false
 
     /// Attempts to find the catchall bot (*) in a Bot list.
     let catchAllBot url =
@@ -108,3 +110,35 @@ module Robots =
                                 Allow    = bot'.Allow    |> List.map directiveRegexPattern
                                 Disallow = bot'.Disallow |> List.map directiveRegexPattern
                         } |> Some
+
+    let xRobotsTagHeaders (headers : HttpResponseHeaders) =
+        [for x in headers do yield x.Key, x.Value |> Seq.toList]
+        |> List.filter (fun (key, values) -> key = "X-Robots-Tag")
+        |> List.map snd
+        |> List.concat
+
+    let metaRobotsContent html =
+        metaTags' html
+        |> List.filter metaRobotsRegex.IsMatch
+        |> List.map (fun x -> metaContentRegex.Match(x).Groups.[2].Value)
+        |> List.map (fun x -> x.Split([|','|], StringSplitOptions.RemoveEmptyEntries))
+        |> List.map List.ofArray
+        |> List.concat
+        |> List.map (fun x -> x.Trim())
+
+    let matchesPattern lst (directiveRegex : Regex) =
+        lst
+        |> List.tryFind directiveRegex.IsMatch
+        |> function None -> false | Some _ -> true
+
+    let robotsInstructions headers html =
+        let robotsHeaders = xRobotsTagHeaders headers
+        let metasContent = metaRobotsContent html
+        let robotsDirectives = List.append robotsHeaders metasContent
+        let indexing  =
+            matchesPattern robotsDirectives noIndexRegex
+            |> function true -> Disallowed | false -> Allowed
+        let following =
+            matchesPattern robotsDirectives noFollowRegex
+            |> function true -> NoFollow | false -> DoFollow
+        { Indexing = indexing; Following = following}
