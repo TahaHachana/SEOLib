@@ -4,7 +4,7 @@ open System
 open System.IO
 open System.Net
 open System.Text.RegularExpressions
-open Types
+open SEOLib.Types
 
 module internal Utilities =
 
@@ -29,28 +29,29 @@ module internal Utilities =
     let testNull = function null -> 0 | (x : string) -> int x
 
     // Regex patterns.
-    let absoluteUriPattern   = "(?i)^https?://[^\"]*"
-    let altAttributePattern  = "(?i)alt=(\"|')(.+?)(\"|')"
+    let absoluteUriPattern   = """(?i)^https?://[^"]*"""
+    let altAttributePattern  = """(?i)alt=("|')(.+?)("|')"""
     let aTagPattern          = "(?i)<a.+?>"
     let commentJSCssPattern  = "(?is)<!--.*?--\s*>|<script.*?</script>|<style.*?</style>"
     let crawlDelayPattern    = "(?i)^crawl-delay:(.+)"
     let googleBotPattern     = "(?i)googlebot"
     let h1TagPattern         = "(?is)<h1>(.+?)</h1>"
-    let hrefPattern          = "(?i)href\\s*=\\s*(\"|\')/?((?!#.*|/\B|mailto:|location\.|javascript:)[^\"\'\#]+)(\"|\'|\#)"
+    let hrefPattern          = """(?i)href\\s*=\\s*("|')/?((?!#.*|/\B|mailto:|location\.|javascript:)[^"'\#]+)("|'|\#)"""
     let htmlContentPattern   = "(?i)html"
     let htmlTagPattern       = "(?i)<[^>]*>"
     let imgTagPattern        = "(?is)<img.+?>"
     let inlineCssPattern     = "(?is)<style.*?</style>"
     let inlineJsPattern      = "(?is)<script.*?</script>"
-    let metaDescContPattern  = "(?is)content=(\"|')(.+?)(\"|')"
-    let metaDescPattern      = "(?i)name=(\"|')description(\"|')"
-    let metaRefreshPattern   = "(?i)http-equiv=(\"|')refresh(\"|')"
+    let metaDescContPattern  = """(?is)content=("|')(.+?)("|')"""
+    let metaDescPattern      = """(?i)name=("|')description("|')"""
+    let metaRefreshPattern   = """(?i)http-equiv=("|')refresh("|')"""
     let metaRobotsPattern    = "(?i)robots"
     let metaTagPattern       = "(?i)<meta.+?>"
     let noFollowPattern      = "(?i)nofollow"
     let noIndexPattern       = "(?i)noindex"
     let noneDirecitvePattern = "(?i)none"
     let oneWordPattern       = "[^0-9\W]+"
+    let relAttributePattern  = """rel=("|')(.?)("|')"""
     let robotsAllowPattern   = "(?i)^allow:(.+)"
     let robotsCommentPattern = "^#"
     let robotsDAllowPattern  = "(?i)^disallow:(.+)"
@@ -60,7 +61,6 @@ module internal Utilities =
     let userAgentPattern     = ".+?:"
     let userAgentPattern'    = "(?i)^user-agent"
     let userAgentPattern''   = "(?i)^user-agent:(.+)"
-
 
     // Regex objects.
     let absoluteUriRegex   = compileRegex absoluteUriPattern
@@ -85,6 +85,7 @@ module internal Utilities =
     let noIndexRegex       = compileRegex noIndexPattern
     let noneRegex          = compileRegex noneDirecitvePattern
     let oneKeywordRegex    = compileRegex oneWordPattern
+    let relAttributeRegex  = compileRegex relAttributePattern
     let robotsAllowRegex   = compileRegex robotsAllowPattern
     let robotsCommentRegex = compileRegex robotsCommentPattern
     let robotsDAllowRegex  = compileRegex robotsDAllowPattern
