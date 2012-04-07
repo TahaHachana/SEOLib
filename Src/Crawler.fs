@@ -9,13 +9,58 @@ open System.Text.RegularExpressions
 open SEOLib.Robots
 open SEOLib.Types
 open SEOLib.Utilities
+open Links
+open Http
 
 module Crawler =
+
+    let getUrl url (isAllowedFunc : string -> Permission) =
+        async {
+            let! httpData = fetchUrl url
+            match httpData with
+                | None      -> return None
+                | Some data ->
+                    let url' = data.Location |> function Some x -> x.ToString() | None -> url
+                    let headers = data.Headers
+                    let html = data.Content
+                    let permission = isAllowedFunc url'
+                    let robotsDirectives = robotsInstructions headers html
+                    let robotsDirectives' = { robotsDirectives with Indexing = permission }
+                    return
+                        Some {
+                            Url     = url'
+                            Headers = headers
+                            Html    = html
+                            Robots  = robotsDirectives
+                        }
+            }
+
+    let crawlUrl isAllowedFunc host onlyInternal rogueMode url =
+        async {
+            let! webPage = getUrl url isAllowedFunc
+            match webPage with
+                | None      -> return []
+                | Some data ->
+                    let following = data.Robots.Following
+                    let links = collectLinks host data onlyInternal
+                    let links' =
+                        match rogueMode with
+                            | OFF ->
+                                match following with
+                                    | DoFollow ->
+                                        links
+                                        |> List.filter (fun (_, follow) -> follow = DoFollow)
+                                        |> List.map fst
+                                    | NoFollow -> []
+                            | ON ->
+                                links |> List.map fst
+                    return links'
+            }
 
     [<Literal>]
     let Gate = 5
 
-    let processMsg (hashset : HashSet<string>) limit (q : ConcurrentQueue<string>) run (mailbox : Agent) =
+    let processMsg (hashset : HashSet<string>) limit (q : ConcurrentQueue<string>) run (mailbox : MessageAgent) =
         let keepRunning =
             match limit with
             | Some limit' ->
@@ -56,7 +101,7 @@ module Crawler =
                 }
             loop true false)
 
-    let spawnUrlCollector (q : ConcurrentQueue<string>) (supervisor : Agent) =
+    let spawnUrlCollector (q : ConcurrentQueue<string>) (supervisor : MessageAgent) =
         MailboxProcessor.Start(fun y ->
             let rec loop count =
                 async {
@@ -81,7 +126,7 @@ module Crawler =
                 }
             loop 1)
 
-    let spawnCrawler id host (urlCollector : Agent) (supervisor : Agent) isAllowedFunc f =
+    let spawnCrawler (urlCollector : MessageAgent) (supervisor : MessageAgent) (crawlFunc : string -> Async<string list>) =
         MailboxProcessor.Start(fun inbox ->
             let rec loop() =
                 async {
@@ -90,12 +135,8 @@ module Crawler =
                         | URL url ->
                             match url with
                                 | Some url' ->
-                                    let isAllowed = isAllowedFunc url'
-                                    match isAllowed with
-                                        | true ->
-                                            let links = f url' host
-                                            links |> List.iter (fun link -> urlCollector.Post <| URL (Some link))
-                                        | false -> ()
+                                    let! links = crawlFunc url'
+                                    links |> List.iter (fun link -> urlCollector.Post <| URL (Some link))
                                     supervisor.Post(Mailbox inbox)
                                 | None -> supervisor.Post(Mailbox inbox)
                             return! loop()
@@ -105,23 +146,24 @@ module Crawler =
                     }
             loop())
 
-    let spawnCanceler (supervisor : Agent) =
-        Agent.Start(fun inbox ->
+    let spawnCanceler (supervisor : MessageAgent) =
+        MessageAgent.Start(fun inbox ->
             async {
                 let! msg = inbox.Receive()
                 supervisor.Post Cancel
                 (inbox :> IDisposable).Dispose()
                 })
 
-    let crawl (url : string) limit f g =
+    let crawl (url : string) limit f onlyInternal rogueMode =
         let bot = catchAllBot url
-        let h = isAllowed bot
+        let isAllowedFunc = isAllowed bot
         let q = ConcurrentQueue<string>()
         let set = HashSet<string>()
         let host = hostFromUrl url
         let supervisor = spawnSupervisor set limit q f
         let urlCollector = spawnUrlCollector q supervisor
-        let crawlers = [1 .. Gate] |> List.map (fun x -> spawnCrawler x host urlCollector supervisor h g)
+        let crawlUrl' = crawlUrl isAllowedFunc host onlyInternal rogueMode
+        let crawlers = [1 .. Gate] |> List.map (fun x -> spawnCrawler urlCollector supervisor crawlUrl')
         let canceler = spawnCanceler supervisor
         crawlers.Head.Post <| URL(Some url)
         crawlers.Tail |> List.iter (fun agent -> agent.Post <| URL None)
