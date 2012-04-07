@@ -430,11 +430,10 @@ module Violations =
     /// Checks if a Web page is disallowed for crawling.
     let checkNoIndex (wp : WebPage) =
         async {
-            let arr =
-                wp.ResponseUri |> function
-                    | Some uri -> [||]
-                    | None -> [| constructViolation noIndex None |]
-            return arr
+            let indexing = wp.Robots.Indexing
+            match indexing with
+                | Allowed    -> return [||]
+                | Disallowed -> return [| constructViolation noIndex None |]
             }
 
     /// Checks query parameters in a URL.
