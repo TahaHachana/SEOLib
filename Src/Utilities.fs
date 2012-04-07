@@ -42,6 +42,7 @@ module internal Utilities =
     let imgTagPattern        = "(?is)<img.+?>"
     let inlineCssPattern     = "(?is)<style.*?</style>"
     let inlineJsPattern      = "(?is)<script.*?</script>"
+    let metaContentPattern   = """content=("|')(.+)("|')"""
     let metaDescContPattern  = """(?is)content=("|')(.+?)("|')"""
     let metaDescPattern      = """(?i)name=("|')description("|')"""
     let metaRefreshPattern   = """(?i)http-equiv=("|')refresh("|')"""
@@ -76,6 +77,7 @@ module internal Utilities =
     let imgTagRegex        = compileRegex imgTagPattern
     let inlineCssRegex     = compileRegex inlineCssPattern
     let inlineJsRegex      = compileRegex inlineJsPattern
+    let metaContentRegex   = compileRegex metaContentPattern
     let metaDescContRegex  = compileRegex metaDescContPattern
     let metaDescRegex      = compileRegex metaDescPattern
     let metaRefreshRegex   = compileRegex metaRefreshPattern
