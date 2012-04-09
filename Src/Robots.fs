@@ -116,6 +116,7 @@ module Robots =
         |> List.filter (fun (key, values) -> key = "X-Robots-Tag")
         |> List.map snd
         |> List.concat
+        |> List.filter (fun x -> userAgentRegex.IsMatch x = false)
 
     let metaRobotsContent html =
         metaTags' html
