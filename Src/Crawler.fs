@@ -65,7 +65,7 @@ module Crawler =
             match limit with
             | Some limit' ->
                 let count = hashset.Count
-                count < limit' - 1 && run
+                count < limit' && run
             | None        -> run
         match keepRunning with
             | true ->
@@ -135,6 +135,7 @@ module Crawler =
                         | URL url ->
                             match url with
                                 | Some url' ->
+                                    printfn "crawling %s" url'
                                     let! links = crawlFunc url'
                                     links |> List.iter (fun link -> urlCollector.Post <| URL (Some link))
                                     supervisor.Post(Mailbox inbox)
@@ -165,6 +166,6 @@ module Crawler =
         let crawlUrl' = crawlUrl isAllowedFunc host onlyInternal rogueMode
         let crawlers = [1 .. Gate] |> List.map (fun x -> spawnCrawler urlCollector supervisor crawlUrl')
         let canceler = spawnCanceler supervisor
-        crawlers.Head.Post <| URL(Some url)
-        crawlers.Tail |> List.iter (fun agent -> agent.Post <| URL None)
+        urlCollector.Post <| URL (Some url)
+        crawlers |> List.iter (fun agent -> agent.Post <| URL None)
         canceler
