@@ -35,12 +35,13 @@ module Crawler =
                         }
             }
 
-    let crawlUrl isAllowedFunc host onlyInternal rogueMode url =
+    let crawlUrl isAllowedFunc f host onlyInternal rogueMode url =
         async {
             let! webPage = getUrl url isAllowedFunc
             match webPage with
                 | None      -> return []
                 | Some data ->
+                    do f data
                     let following = data.Robots.Following
                     let links = collectLinks host data onlyInternal
                     let links' =
@@ -155,7 +156,7 @@ module Crawler =
                 (inbox :> IDisposable).Dispose()
                 })
 
-    let crawl (url : string) limit f onlyInternal rogueMode =
+    let crawl (url : string) limit f fWebPage onlyInternal rogueMode =
         let bot = catchAllBot url
         let isAllowedFunc = isAllowed bot
         let q = ConcurrentQueue<string>()
@@ -163,7 +164,7 @@ module Crawler =
         let host = hostFromUrl url
         let supervisor = spawnSupervisor set limit q f
         let urlCollector = spawnUrlCollector q supervisor
-        let crawlUrl' = crawlUrl isAllowedFunc host onlyInternal rogueMode
+        let crawlUrl' = crawlUrl isAllowedFunc fWebPage host onlyInternal rogueMode
         let crawlers = [1 .. Gate] |> List.map (fun x -> spawnCrawler urlCollector supervisor crawlUrl')
         let canceler = spawnCanceler supervisor
         urlCollector.Post <| URL (Some url)
