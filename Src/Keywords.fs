@@ -4,7 +4,7 @@ open System
 open System.IO
 open System.Net
 open System.Text.RegularExpressions
-open HTML
+open Html
 open StopWords
 open Types
 open Utilities

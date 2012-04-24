@@ -3,8 +3,9 @@
 open System
 open System.IO
 open System.Net
+open System.Net.Http
 open System.Text.RegularExpressions
-open SEOLib.Types
+open Types
 
 module internal Utilities =
 
@@ -151,7 +152,7 @@ module internal Utilities =
         let altMatch = altAttributeRegex.Match value
         altMatch.Success |> function
             | true ->
-                let alt = altMatch.Groups.[2].Value.Trim() |> Some
+                let alt = groupValue altMatch 2 |> Some
                 value, index, alt
             | false -> value, index, None
 
@@ -179,7 +180,7 @@ module internal Utilities =
 
     let w3cValidatorUri = "http://validator.w3.org/check?uri="
 
-    /// Decodes HTML encoded characters in a string.
+    /// Decodes HTML encoded characters..
     let decodeHtml html = WebUtility.HtmlDecode html
 
     /// Calculates the density of a keyword.
@@ -189,3 +190,22 @@ module internal Utilities =
     let hostFromUrl url =
         let uri = Uri url
         uri.Host
+
+    /// Returns an asynchronous computation that will wait for the task of sending an async GET request to a Uri.
+    let awaitHttpResponse (client : HttpClient) (requestUri : Uri) = client.GetAsync requestUri |> Async.AwaitTask
+
+    /// Returns an asynchronous computation that will wait for the task of sending an async GET request to a Uri.
+    let awaitHttpResponse' (client : HttpClient) (requestUrl : string) = client.GetAsync requestUrl |> Async.AwaitTask
+    
+    /// Returns an asynchronous computation that will wait for the task of reading the content of a HTTP response message as a string.
+    let awaitReadAsString (response : HttpResponseMessage) = response.Content.ReadAsStringAsync() |> Async.AwaitTask
+
+    /// IE9's user-agent string.
+    let ie9UserAgent = "Mozilla/5.0 (Windows; U; MSIE 9.0; Windows NT 9.0; en-US)"
+
+    /// Initializes a HttpClient instance, sets its timeout property to the specified value and adds a user-agent request header. 
+    let httpClient timeout =
+        let client = new HttpClient()
+        client.Timeout <- TimeSpan(0, 0, timeout)
+        client.DefaultRequestHeaders.Add("user-agent", ie9UserAgent)
+        client

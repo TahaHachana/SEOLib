@@ -7,6 +7,16 @@ open Google.Apis.Pagespeedonline.v1.Data
 module Types =
 
     [<AutoOpenAttribute>]
+    module HttpTypes =
+
+        type HttpData =
+            {
+                Location : Uri option
+                Headers  : HttpResponseHeaders
+                Content  : string
+            }
+
+    [<AutoOpenAttribute>]
     module CrawlerTypes =
 
         type Message =

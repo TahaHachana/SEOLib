@@ -4,7 +4,7 @@ open System
 open System.Net
 open System.Net.Http.Headers
 open System.Text.RegularExpressions
-open HTML
+open Html
 open Http
 open Types
 open Utilities
@@ -13,22 +13,23 @@ module Robots =
 
     /// Constructs the robots.txt full URL.
     let robotstxtUrl url = 
-        let uri  = Uri url
-        let host = uri.Host
-        let url' = "http://" + host + "/robots.txt"
+        let host  = Uri(url).Host
+        let url' = String.concat "" ["http://"; host; "/robots.txt"]
         Uri url'
 
     /// Downloads the content of a robots.txt file in the form of a string list.
     let downloadRobotstxt (uri : Uri) =
-        try
-            use client = new WebClient()
-            let agent = "Mozilla/5.0 (Windows; U; MSIE 9.0; Windows NT 9.0; en-US)"
-            client.Headers.Add("user-agent", agent)
-            let txt = client.DownloadString uri
-            let lines = txt.Split(Environment.NewLine.ToCharArray(), StringSplitOptions.RemoveEmptyEntries)
-            let lines' = lines |> Array.filter (fun x -> robotsCommentRegex.IsMatch x = false) |> Some
-            lines'
-        with _ -> None
+        async {
+            try
+                let! html = fetchUri' uri
+                match html with
+                    | None   -> return None
+                    | Some x ->
+                        let lines = x.Split(Environment.NewLine.ToCharArray(), StringSplitOptions.RemoveEmptyEntries)
+                        let lines' = lines |> Array.filter (fun x -> robotsCommentRegex.IsMatch x = false) |> Some
+                        return lines'
+            with _ -> return None
+            }
 
     /// Filters robots.txt directives that satisfy a pattern.
     let filterDirectives lst regex =
@@ -91,10 +92,11 @@ module Robots =
 
     /// Attempts to find the catchall bot (*) in a Bot list.
     let catchAllBot url =
+        async {
             let uri = robotstxtUrl url
-            let directives = downloadRobotstxt uri
+            let! directives = downloadRobotstxt uri
             match directives with
-                | None -> None
+                | None -> return None
                 | Some directives' ->
                 let bot =
                     directives'
@@ -103,13 +105,16 @@ module Robots =
                     |> bots
                     |> List.tryFind (fun x -> x.Name = "*")
                 match bot with    
-                    | None -> None
+                    | None -> return None
                     | Some bot' ->
-                        {
-                            bot' with
-                                Allow    = bot'.Allow    |> List.map directiveRegexPattern
-                                Disallow = bot'.Disallow |> List.map directiveRegexPattern
-                        } |> Some
+                        let bot'' =
+                            {
+                                bot' with
+                                    Allow    = bot'.Allow    |> List.map directiveRegexPattern
+                                    Disallow = bot'.Disallow |> List.map directiveRegexPattern
+                            } |> Some
+                        return bot''
+            }
 
     let xRobotsTagHeaders (headers : HttpResponseHeaders) =
         [for x in headers do yield x.Key, x.Value |> Seq.toList]

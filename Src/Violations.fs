@@ -3,9 +3,9 @@
 open System
 open System.Net
 open System.Text.RegularExpressions
-open SEOLib.HTML
-open SEOLib.Types
-open SEOLib.Utilities
+open Html
+open Types
+open Utilities
 
 module Violations =
 

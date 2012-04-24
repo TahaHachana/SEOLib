@@ -6,21 +6,21 @@ open System.Net
 open System.Net.Http
 open System.Net.Http.Headers
 open System.Text.RegularExpressions
-open HTML
+open Html
 open Types
 open Utilities
 open Http
 
 module Links =
 
-    let relAttributeContent anchor =
+    let private relAttributeContent anchor =
         relAttributeRegex.Match(anchor).Groups.[2].Value
         |> (fun x -> x.Split([|','|], StringSplitOptions.RemoveEmptyEntries))
         |> List.ofArray
         |> List.map (fun x -> x.Trim())
 
     /// Matches <a> tags in an HTML string.
-    let scrapeUris html =
+    let private scrapeUris html =
         anchorRegex.Matches html
         |> Seq.cast<Match>
         |> Seq.toList
@@ -34,9 +34,9 @@ module Links =
                 |> function Some _ -> NoFollow | None -> DoFollow
             href, follow)
 
-    let partitionUris uris = uris |> List.partition (fun (href, follow) -> absoluteUriRegex.IsMatch href)
+    let private partitionUris uris = uris |> List.partition (fun (href, follow) -> absoluteUriRegex.IsMatch href)
 
-    let formatRelativeUris relativeUris host =
+    let private formatRelativeUris relativeUris host =
         relativeUris
         |> List.map (fun (href, follow) ->
             let href' =
@@ -47,11 +47,8 @@ module Links =
             href', follow)
 
     /// Scrapes links from an HTML string optionally retaining only internal ones.
-    let scrapeLinks host html onlyInternal =
-        let absoluteUris, relativeUris =
-            html
-            |> scrapeUris
-            |> partitionUris
+    let private scrapeLinks host html onlyInternal =
+        let absoluteUris, relativeUris = scrapeUris html |> partitionUris
         let relativeUris' = formatRelativeUris relativeUris host
         let allLinks =
             absoluteUris
@@ -62,8 +59,8 @@ module Links =
         match onlyInternal with
             | false -> allLinks
             | true  ->
-                let regex = compileRegex host
-                allLinks |> List.filter (fun (href, _) -> regex.IsMatch href)
+                let hostRegex = compileRegex host
+                allLinks |> List.filter (fun (href, _) -> hostRegex.IsMatch href)
 
     /// Collects links from the given Web page.
     let collectLinks host (webPage : WebPage) onlyInternal =
