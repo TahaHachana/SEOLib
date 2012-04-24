@@ -4,7 +4,7 @@ open System.Net
 open Types
 open Utilities
 
-module HTML =
+module Html =
 
     /// Removes comments, inline JS/CSS and HTML tags.
     let cleanHtml html =
@@ -20,7 +20,7 @@ module HTML =
         |> List.map (fun x -> x.Value, x.Index)
 
     /// Matches the meta tag pattern in an HTML string and
-    /// returns the value each successful match.
+    /// returns the value of each successful match.
     let metaTags' html =
         regexMatches metaTagRegex html
         |> Seq.toList
@@ -63,6 +63,7 @@ module HTML =
             return status
             }
 
+    /// Matches the title tag pattern in HTML code.
     let titleTags html =
         regexMatches titleTagRegex html
         |> Seq.toList

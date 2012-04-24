@@ -14,7 +14,7 @@ open Http
 
 module Crawler =
 
-    let getUrl url (isAllowedFunc : string -> Permission) =
+    let private getUrl url (isAllowedFunc : string -> Permission) =
         async {
             let! httpData = fetchUrl url
             match httpData with
@@ -35,7 +35,7 @@ module Crawler =
                         }
             }
 
-    let crawlUrl isAllowedFunc f host onlyInternal rogueMode url =
+    let private crawlUrl isAllowedFunc f host onlyInternal rogueMode url =
         async {
             let! webPage = getUrl url isAllowedFunc
             match webPage with
@@ -59,9 +59,9 @@ module Crawler =
             }
 
     [<Literal>]
-    let Gate = 5
+    let private Gate = 5
 
-    let processMsg (hashset : HashSet<string>) limit (q : ConcurrentQueue<string>) run (mailbox : MessageAgent) =
+    let private processMsg (hashset : HashSet<string>) limit (q : ConcurrentQueue<string>) run (mailbox : MessageAgent) =
         let keepRunning =
             match limit with
             | Some limit' ->
@@ -82,7 +82,7 @@ module Crawler =
                     | _ -> mailbox.Post <| URL None
             | false -> mailbox.Post Stop
 
-    let spawnSupervisor hashset limit q f =
+    let private spawnSupervisor hashset limit q f =
         MailboxProcessor.Start(fun x ->
             let processMsg' = processMsg hashset limit q
             let rec loop run cancel =
@@ -102,7 +102,7 @@ module Crawler =
                 }
             loop true false)
 
-    let spawnUrlCollector (q : ConcurrentQueue<string>) (supervisor : MessageAgent) =
+    let private spawnUrlCollector (q : ConcurrentQueue<string>) (supervisor : MessageAgent) =
         MailboxProcessor.Start(fun y ->
             let rec loop count =
                 async {
@@ -127,7 +127,7 @@ module Crawler =
                 }
             loop 1)
 
-    let spawnCrawler (urlCollector : MessageAgent) (supervisor : MessageAgent) (crawlFunc : string -> Async<string list>) =
+    let private spawnCrawler (urlCollector : MessageAgent) (supervisor : MessageAgent) (crawlFunc : string -> Async<string list>) =
         MailboxProcessor.Start(fun inbox ->
             let rec loop() =
                 async {
@@ -148,7 +148,7 @@ module Crawler =
                     }
             loop())
 
-    let spawnCanceler (supervisor : MessageAgent) =
+    let private spawnCanceler (supervisor : MessageAgent) =
         MessageAgent.Start(fun inbox ->
             async {
                 let! msg = inbox.Receive()
@@ -157,16 +157,18 @@ module Crawler =
                 })
 
     let crawl (url : string) limit f fWebPage onlyInternal rogueMode =
-        let bot = catchAllBot url
-        let isAllowedFunc = isAllowed bot
-        let q = ConcurrentQueue<string>()
-        let set = HashSet<string>()
-        let host = hostFromUrl url
-        let supervisor = spawnSupervisor set limit q f
-        let urlCollector = spawnUrlCollector q supervisor
-        let crawlUrl' = crawlUrl isAllowedFunc fWebPage host onlyInternal rogueMode
-        let crawlers = [1 .. Gate] |> List.map (fun x -> spawnCrawler urlCollector supervisor crawlUrl')
-        let canceler = spawnCanceler supervisor
-        urlCollector.Post <| URL (Some url)
-        crawlers |> List.iter (fun agent -> agent.Post <| URL None)
-        canceler
+        async {
+            let! bot = catchAllBot url
+            let isAllowedFunc = isAllowed bot
+            let q = ConcurrentQueue<string>()
+            let set = HashSet<string>()
+            let host = hostFromUrl url
+            let supervisor = spawnSupervisor set limit q f
+            let urlCollector = spawnUrlCollector q supervisor
+            let crawlUrl' = crawlUrl isAllowedFunc fWebPage host onlyInternal rogueMode
+            let crawlers = [1 .. Gate] |> List.map (fun x -> spawnCrawler urlCollector supervisor crawlUrl')
+            let canceler = spawnCanceler supervisor
+            urlCollector.Post <| URL (Some url)
+            crawlers |> List.iter (fun agent -> agent.Post <| URL None)
+            return canceler
+            }
