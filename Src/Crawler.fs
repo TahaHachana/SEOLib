@@ -136,7 +136,6 @@ module Crawler =
                         | URL url ->
                             match url with
                                 | Some url' ->
-                                    printfn "crawling %s" url'
                                     let! links = crawlFunc url'
                                     links |> List.iter (fun link -> urlCollector.Post <| URL (Some link))
                                     supervisor.Post(Mailbox inbox)
@@ -156,10 +155,18 @@ module Crawler =
                 (inbox :> IDisposable).Dispose()
                 })
 
+    let private genIsAllowedFunc rogueMode url =
+        async {
+            match rogueMode with
+                | OFF ->
+                    let! bot = catchAllBot url
+                    return isAllowed bot
+                | ON  -> return isAllowed None
+            }
+
     let crawl (url : string) limit f fWebPage onlyInternal rogueMode =
         async {
-            let! bot = catchAllBot url
-            let isAllowedFunc = isAllowed bot
+            let! isAllowedFunc = genIsAllowedFunc rogueMode url
             let q = ConcurrentQueue<string>()
             let set = HashSet<string>()
             let host = hostFromUrl url
