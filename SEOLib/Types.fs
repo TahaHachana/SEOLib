@@ -1,4 +1,26 @@
 ﻿namespace SEOLib
+
+module Types =
+    
+    [<AutoOpenAttribute>]
+    module HtmlTypes =
+
+        type HtmlAttribute =
+            {
+                Key   : string
+                Value : string
+            }
+
+        type Heading =
+            | H1 of string
+            | H2 of string
+            | H3 of string
+            | H4 of string
+            | H5 of string
+            | H6 of string
+
+
+    
 //
 //open System
 //open System.Net.Http.Headers

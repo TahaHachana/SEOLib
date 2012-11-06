@@ -1,4 +1,108 @@
 ﻿namespace SEOLib
+
+open System.Net
+open System.Text.RegularExpressions
+open Types
+
+module internal Utilities =
+
+    [<AutoOpenAttribute>]
+    module HTML =
+
+        /// Decodes HTML encoded characters.
+        let inline decodeHtml html = WebUtility.HtmlDecode html
+
+        let inline checkEmptyString str = match str with "" -> None | _ -> Some str
+        
+        let checkEmptyString' = decodeHtml >> checkEmptyString
+
+        ///Compiles a pattern into a Regex object.
+        let inline compileRegex pattern = Regex(pattern, RegexOptions.Compiled)
+
+        /// Returns the trimmed value of a group in a match object.
+        let inline groupValue (idx : int) (regex : Regex) str =
+            regex.Match(str).Groups.[idx].Value.Trim()
+
+        let inline groupValue' (idx : int) (matchObj : Match) =
+            matchObj.Groups.[idx].Value.Trim()
+
+        let inline fstGroupValue regex str = groupValue 0 regex str
+        let inline sndGroupValue regex str = groupValue 1 regex str
+        let inline trdGroupValue regex str = groupValue 2 regex str
+        let inline frtGroupValue regex str = groupValue 3 regex str
+
+        let inline fstGroupValue' matchObj = groupValue' 0 matchObj
+        let inline sndGroupValue' matchObj = groupValue' 1 matchObj
+        let inline trdGroupValue' matchObj = groupValue' 2 matchObj
+        let inline frtGroupValue' matchObj = groupValue' 3 matchObj
+
+        let attributePattern   = "(?i)(\w+)=(\"|')(.+?)(\"|')"
+        let contentAttrPattern = "(?i)content"
+        let headingPattern     = "(?is)<h([1-6])>(.+?)</h[1-6]>"
+        let metaDescPattern    = "(?i)name=(\"|')description(\"|')"
+        let metaKeysPattern    = "(?i)name=(\"|')keywords(\"|')"
+        let metaTagPattern     = "(?i)<meta.+?>"
+        let tagPattern         = "<.+?>"
+        let titlePattern       = "(?is)<title>(.+?)</title>"
+
+        let attributeRegex   = compileRegex attributePattern
+        let contentAttrRegex = compileRegex contentAttrPattern
+        let headingRegex     = compileRegex headingPattern
+        let metaDescRegex    = compileRegex metaDescPattern
+        let metaKeysRegex    = compileRegex metaKeysPattern
+        let metaTagRegex     = compileRegex metaTagPattern
+        let tagRegex         = compileRegex tagPattern
+        let titleRegex       = compileRegex titlePattern
+
+        let inline makeHtmlAttribute key value =
+            {
+                Key   = key
+                Value = value
+            }
+
+        let inline tagAttributes tag =
+            attributeRegex.Matches tag
+            |> Seq.cast<Match>
+            |> Seq.toArray
+            |> Array.map (fun x ->
+                makeHtmlAttribute (sndGroupValue' x) (frtGroupValue' x))
+
+        let inline metaTag metaTags (regex : Regex) (regex' : Regex) =
+            metaTags
+            |> Array.tryFind regex.IsMatch
+            |> function
+                | None -> None
+                | Some metaDesc ->
+                    tagAttributes metaDesc
+                    |> Array.tryFind (fun x -> regex'.IsMatch x.Key)
+                    |> function
+                        | None -> None
+                        | Some attr ->
+                            attr.Value
+                            |> decodeHtml
+                            |> Some
+
+        let stripTags html = tagRegex.Replace(html, "")
+
+        let makeHeading rank value =
+            let value' = stripTags value |> decodeHtml
+            match rank with
+                | "1" -> H1 value'
+                | "2" -> H2 value'
+                | "3" -> H3 value'
+                | "4" -> H4 value'
+                | "5" -> H5 value'
+                | _   -> H6 value'
+
+
+//    let htmlTagPattern         = "(?i)<[^>]*>"
+//    let metaDescriptionPattern = "(?i)name=('|\")description('|\")"
+//    let metaKeywordsPattern    = "(?i)name=('|\")keywords('|\")"
+//
+//    let htmlTagRegex         = compileRegex htmlTagPattern
+//    let metaDescriptionRegex = compileRegex metaDescriptionPattern
+//    let metaKeywordsRegex    = compileRegex metaKeywordsPattern
+
 //
 //open System
 //open System.IO
