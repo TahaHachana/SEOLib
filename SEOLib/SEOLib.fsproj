@@ -51,15 +51,15 @@
   <ItemGroup>
     <Compile Include="AssemblyInfo.fs" />
     <Compile Include="Types.fs" />
+    <Compile Include="StopWords.fs" />
     <Compile Include="Utilities.fs" />
     <Compile Include="Html.fs" />
-    <Compile Include="Crawler.fs" />
     <Compile Include="Http.fs" />
     <Compile Include="Keywords.fs" />
+    <Compile Include="Crawler.fs" />
     <Compile Include="Links.fs" />
     <Compile Include="PageSpeed.fs" />
     <Compile Include="Robots.fs" />
-    <Compile Include="StopWords.fs" />
     <Compile Include="Violations.fs" />
     <None Include="packages.config" />
     <None Include="Script.fsx" />

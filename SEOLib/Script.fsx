@@ -24,3 +24,9 @@ let metakeysOption = Html.metaKeywords metaTags
 
 // headings
 let hs = Html.headings html
+
+//================
+// Keywords module
+//================
+
+let keywords = Keywords.analyzeKeywords html

@@ -1,24 +1,47 @@
 ﻿namespace SEOLib
 
+open System
+open System.Net
+
 module Types =
     
-    [<AutoOpenAttribute>]
-    module HtmlTypes =
+    type HtmlAttribute =
+        {
+            Key   : string
+            Value : string
+        }
 
-        type HtmlAttribute =
-            {
-                Key   : string
-                Value : string
-            }
+    type Heading =
+        | H1 of string
+        | H2 of string
+        | H3 of string
+        | H4 of string
+        | H5 of string
+        | H6 of string
 
-        type Heading =
-            | H1 of string
-            | H2 of string
-            | H3 of string
-            | H4 of string
-            | H5 of string
-            | H6 of string
+    type Header =
+        {
+            Key: string
+            Value: string list
+        }
 
+    type HttpData =
+        {
+            RequestUri  : Uri
+            StatusCode  : HttpStatusCode
+            Headers     : Header list
+            MediaType   : string
+            Size        : int option 
+            Html        : string option
+            ElapsedTime : int64
+        }
+
+    type Keyword =
+        {
+            Combination : string
+            Occurrence  : int
+            Density     : float
+        }
 
     
 //

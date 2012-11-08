@@ -1,13 +1,18 @@
 ﻿namespace SEOLib
 
+open System
 open System.Net
+open System.Net.Http
+open System.Net.Http.Headers
+open System.Text
 open System.Text.RegularExpressions
 open Types
+open StopWords
 
 module internal Utilities =
 
     [<AutoOpenAttribute>]
-    module HTML =
+    module Html =
 
         /// Decodes HTML encoded characters.
         let inline decodeHtml html = WebUtility.HtmlDecode html
@@ -17,7 +22,7 @@ module internal Utilities =
         let checkEmptyString' = decodeHtml >> checkEmptyString
 
         ///Compiles a pattern into a Regex object.
-        let inline compileRegex pattern = Regex(pattern, RegexOptions.Compiled)
+        let compileRegex pattern = Regex(pattern, RegexOptions.Compiled)
 
         /// Returns the trimmed value of a group in a match object.
         let inline groupValue (idx : int) (regex : Regex) str =
@@ -54,7 +59,7 @@ module internal Utilities =
         let tagRegex         = compileRegex tagPattern
         let titleRegex       = compileRegex titlePattern
 
-        let inline makeHtmlAttribute key value =
+        let inline makeHtmlAttribute key value : HtmlAttribute =
             {
                 Key   = key
                 Value = value
@@ -93,6 +98,142 @@ module internal Utilities =
                 | "4" -> H4 value'
                 | "5" -> H5 value'
                 | _   -> H6 value'
+
+    [<AutoOpenAttribute>]
+    module Http =
+        
+        // IE9 user-agent string.
+        let ie9UserAgent = "Mozilla/5.0 (Windows; U; MSIE 9.0; Windows NT 9.0; en-US)"
+    
+        /// Initializes a HttpClient instance and adds a user-agent request header. 
+        let inline httpClient () =
+            let client = new HttpClient()
+            client.DefaultRequestHeaders.Add("User-Agent", ie9UserAgent)
+            client.MaxResponseContentBufferSize <- int64 1073741824
+            client
+
+        /// Returns an asynchronous computation that will wait for the task of sending an async GET request to a Uri.
+        let inline awaitHttpResponse (client : HttpClient) (requestUri : Uri) = client.GetAsync requestUri |> Async.AwaitTask
+
+        /// Returns an asynchronous computation that will wait for the task of reading the content of a HTTP response message as a string.
+        let inline awaitReadAsString (httpContent : HttpContent) = httpContent.ReadAsStringAsync() |> Async.AwaitTask
+
+        /// Initializes a Header instance.
+        let inline constructHeader key (value : string seq) = {Key = key; Value = Seq.toList value}
+        
+        let inline httpHeaders (responseHeaders : HttpResponseHeaders) (contentHeaders : HttpContentHeaders) =
+            [
+                for x in responseHeaders do
+                    yield constructHeader x.Key x.Value
+                for x in contentHeaders do
+                    yield constructHeader x.Key x.Value
+            ]
+
+        let (|HTML|NotHTML|) = function
+            | "text/html" -> HTML
+            | _           -> NotHTML
+
+        /// Reads HttpContent as a string if its content type is HTML.        
+        let readHttpContent statusCode mediaType httpContent =
+            async { 
+                try
+                    match statusCode with
+                        | System.Net.HttpStatusCode.OK ->
+                            match mediaType with
+                                | HTML  ->
+                                    let! html = awaitReadAsString httpContent
+                                    return Some html
+                                | _ -> return None
+                        | _ -> return None
+                with _ -> return None
+            }
+
+        let inline strByteSize (strOption: string option) =
+            match strOption with
+                | None -> None
+                | Some str ->
+                    Encoding.UTF8.GetByteCount str
+                    |> float
+                    |> (fun x -> x / 1024.)
+                    |> Math.Round
+                    |> int
+                    |> Some
+
+        let makeHttpData requestUri statusCode headers mediaType htmlOption elapsedTime =
+            let sizeOption = strByteSize htmlOption
+            {
+                RequestUri  = requestUri
+                StatusCode  = statusCode
+                Headers     = headers
+                MediaType   = mediaType
+                Size        = sizeOption 
+                Html        = htmlOption
+                ElapsedTime = elapsedTime
+            }
+
+    [<AutoOpenAttribute>]
+    module Keywords =
+
+        let stopWords = Array.toList englishStopWords
+
+        let rec removeStopWords stopWords str =
+            match stopWords with
+            | h :: t ->
+                let regex = compileRegex <| "\\b" + h + "\\b" 
+                let str'  = regex.Replace(str, "0")
+                removeStopWords t str'
+            | [] -> str
+
+        let inline round (x : float) = Math.Round(x, 2)
+
+        let computeDensity count count' length =
+            float count / count' * 100. * length
+            |> round
+
+        let makeKeyword combination occurrence density =
+            {
+                Combination = combination
+                Occurrence  = occurrence
+                Density     = density
+            }
+
+        let keywordData (matchCollection : Match seq) str count length =
+            matchCollection
+            |> Seq.map (fun x -> x.Value)
+            |> Seq.distinct
+            |> Seq.map (fun x -> x, Regex("\\b" + x + "\\b").Matches(str).Count)
+            |> Seq.map (fun (x, y) -> x, y, computeDensity y count length)
+            |> Seq.sortBy (fun (_, x, _) -> x)
+            |> Seq.toArray
+            |> Array.rev
+            |> Array.map (fun (x, y, z) -> makeKeyword x y z)
+
+        let regexMatches (regex : Regex) str = regex.Matches str |> Seq.cast<Match>
+
+        let  keywordData' regex str count length =
+            let matchCollection = regexMatches regex str
+            keywordData matchCollection str count length
+
+        let commentJSCssPattern = "(?is)<!--.*?--\s*>|<script.*?</script>|<style.*?</style>"
+        let oneWordPattern      = "[^0-9\W]+"
+        let twoWordsPattern     = "[^0-9\W]+ [^0-9\W]+"
+        let threeWordsPattern   = "[^0-9\W]+ [^0-9\W]+ [^0-9\W]+"
+
+        let commentJSCssRegex  = compileRegex commentJSCssPattern
+        let oneKeywordRegex    = compileRegex oneWordPattern
+        let twoKeywordsRegex   = compileRegex twoWordsPattern
+        let threeKeywordsRegex = compileRegex threeWordsPattern
+    
+        let twoKeywordsData   str count = keywordData' twoKeywordsRegex   str count 2.
+        let threeKeywordsData str count = keywordData' threeKeywordsRegex str count 3.
+
+        let matchCount (matchCollection : Match seq) = matchCollection |> Seq.length |> float
+
+        let cleanHtml html =
+            let html' = commentJSCssRegex.Replace(html, " ")
+            let html'' = tagRegex.Replace(html', "") |> decodeHtml
+            html''.ToLower()
+
 
 
 //    let htmlTagPattern         = "(?i)<[^>]*>"
