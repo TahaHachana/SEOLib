@@ -38,12 +38,24 @@ module Types =
 
     type Keyword =
         {
+            WordsCount  : int
             Combination : string
             Occurrence  : int
             Density     : float
         }
 
+    type Follow = DoFollow | NoFollow
     
+    type LinkType = External | Internal
+
+    type Link =
+        {
+            URL    : string
+            Anchor : string
+            Type   : LinkType
+            Follow : Follow
+        }
+
 //
 //open System
 //open System.Net.Http.Headers

@@ -87,7 +87,7 @@ module internal Utilities =
                             |> decodeHtml
                             |> Some
 
-        let stripTags html = tagRegex.Replace(html, "")
+        let stripTags html = tagRegex.Replace(html, "").Trim()
 
         let makeHeading rank value =
             let value' = stripTags value |> decodeHtml
@@ -180,7 +180,7 @@ module internal Utilities =
             match stopWords with
             | h :: t ->
                 let regex = compileRegex <| "\\b" + h + "\\b" 
-                let str'  = regex.Replace(str, "0")
+                let str'  = regex.Replace(str, "*")
                 removeStopWords t str'
             | [] -> str
 
@@ -190,14 +190,16 @@ module internal Utilities =
             float count / count' * 100. * length
             |> round
 
-        let makeKeyword combination occurrence density =
+        let makeKeyword wordsCount combination occurrence density =
             {
+                WordsCount  = wordsCount
                 Combination = combination
                 Occurrence  = occurrence
                 Density     = density
             }
 
         let keywordData (matchCollection : Match seq) str count length =
+            let wordsCount = int length
             matchCollection
             |> Seq.map (fun x -> x.Value)
             |> Seq.distinct
@@ -206,7 +208,7 @@ module internal Utilities =
             |> Seq.sortBy (fun (_, x, _) -> x)
             |> Seq.toArray
             |> Array.rev
-            |> Array.map (fun (x, y, z) -> makeKeyword x y z)
+            |> Array.map (fun (x, y, z) -> makeKeyword wordsCount x y z)
 
         let regexMatches (regex : Regex) str = regex.Matches str |> Seq.cast<Match>
 
@@ -215,15 +217,15 @@ module internal Utilities =
             keywordData matchCollection str count length
 
         let commentJSCssPattern = "(?is)<!--.*?--\s*>|<script.*?</script>|<style.*?</style>"
-        let oneWordPattern      = "[^0-9\W]+"
-        let twoWordsPattern     = "[^0-9\W]+ [^0-9\W]+"
-        let threeWordsPattern   = "[^0-9\W]+ [^0-9\W]+ [^0-9\W]+"
+        let oneWordPattern      = @"\b\w+\b"
+        let twoWordsPattern     = @"\b\w+\b \b\w+\b"
+        let threeWordsPattern   = @"\b\w+\b \b\w+\b \b\w+\b"
 
         let commentJSCssRegex  = compileRegex commentJSCssPattern
         let oneKeywordRegex    = compileRegex oneWordPattern
         let twoKeywordsRegex   = compileRegex twoWordsPattern
         let threeKeywordsRegex = compileRegex threeWordsPattern
-    
+
         let twoKeywordsData   str count = keywordData' twoKeywordsRegex   str count 2.
         let threeKeywordsData str count = keywordData' threeKeywordsRegex str count 3.
 
@@ -233,6 +235,108 @@ module internal Utilities =
             let html' = commentJSCssRegex.Replace(html, " ")
             let html'' = tagRegex.Replace(html', "") |> decodeHtml
             html''.ToLower()
+
+    [<AutoOpenAttribute>]
+    module Links =
+
+        let absoluteUriPattern = "(?i)^https?://[^\"]*"
+        let aTagPattern = "(?is)(<a.+?>)(.+?)</a>"
+        let baseTagPattern = "(?is)<base.+?>"
+        let commentPattern = "(?s)<!--.*?--\s*>"
+        let hrefPattern = "(?i)href\\s*=\\s*(\"|')/?((?!#.*|/\B|mailto:|location\.|javascript:)[^\"'\#]+)(\"|'|\#)"
+        let relAttributePattern = "rel=(\"|')(.+?)(\"|')"
+        let noFollowPattern = "(?i)nofollow"
+    
+        let absoluteUriRegex = compileRegex absoluteUriPattern
+        let aTagRegex = compileRegex aTagPattern
+        let baseTagRegex = compileRegex baseTagPattern
+        let commentRegex = compileRegex commentPattern
+        let hrefRegex = compileRegex hrefPattern    
+        let relAttributeRegex = compileRegex relAttributePattern
+        let noFollowRegex = compileRegex noFollowPattern
+
+        /// Returns the href attribute value of the <base> tag in a HTML document.
+        let baseUri html requestUri =
+            let baseTagMatch = baseTagRegex.Match html
+            baseTagMatch.Success |> function
+                | false -> requestUri
+                | true  ->
+                    let hrefMatch = hrefRegex.Match baseTagMatch.Value
+                    match hrefMatch.Success with
+                        | false -> requestUri
+                        | true  ->
+                            let group2 = trdGroupValue' hrefMatch
+                            Uri.TryCreate(group2, UriKind.Absolute) |> function
+                                | false, _   -> requestUri
+                                | true , uri -> uri
+            |> Some
+
+        let relAttributes aTag =
+            trdGroupValue relAttributeRegex aTag
+            |> (fun x -> x.Split([|' '|], StringSplitOptions.RemoveEmptyEntries))
+            |> List.ofArray
+            |> List.map (fun x -> x.Trim())
+
+        let linkAnchor matchObj =
+            trdGroupValue' matchObj
+            |> stripTags
+            |> decodeHtml
+
+        /// Scrapes href attributes from <a> tags in an HTML string.
+        let collectHrefs html =
+            aTagRegex.Matches html
+            |> Seq.cast<Match>
+            |> Seq.toList
+            |> List.map (fun x -> sndGroupValue' x, linkAnchor x)
+            |> List.map (fun (openTag, anchor) -> openTag, relAttributes openTag, anchor)
+            |> List.map (fun (openTag, relAttrs, anchor) ->
+                let href = trdGroupValue hrefRegex openTag
+                let follow =
+                    relAttrs
+                    |> List.tryFind (fun x -> noFollowRegex.IsMatch x)
+                    |> function Some _ -> NoFollow | None -> DoFollow
+                href, anchor, follow)
+
+        let partitionLinks links = List.partition (fun (href, _, _) -> absoluteUriRegex.IsMatch href) links
+
+        let formatRelativeUris relativeHrefs uri baseUri =
+            [
+                let uri' =
+                    match baseUri with
+                        | None   -> uri
+                        | Some x -> x
+                for (href : string, anchor, follow) in relativeHrefs do
+                    let isUri, result = Uri.TryCreate(uri', href)
+                    match isUri with
+                        | true  -> yield result, anchor, follow
+                        | false -> ()
+            ]
+
+        let removeComments html = commentRegex.Replace(html, "")
+
+        let makeLink (uri : Uri) anchor linkType follow =
+            {
+                URL    = uri.ToString()
+                Anchor = anchor
+                Type   = linkType
+                Follow = follow
+            }
+
+        let makeLink' (requestUri : Uri) (uriData : (Uri * string * Follow) list) =
+            let host = requestUri.Host
+            uriData |> List.map (fun (uri, anchor, follow) ->
+                let isInternal = uri.Host = host
+                match isInternal with
+                    | false -> makeLink uri anchor External follow
+                    | true  -> makeLink uri anchor Internal follow)
+
+
+
+
+
+
+
+
 
 
 

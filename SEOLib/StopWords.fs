@@ -1,6 +1,6 @@
 ﻿namespace SEOLib
 
-module StopWords =
+module internal StopWords =
 
     let englishStopWords =
         [|
