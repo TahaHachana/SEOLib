@@ -57,10 +57,8 @@
     <Compile Include="Http.fs" />
     <Compile Include="Keywords.fs" />
     <Compile Include="Links.fs" />
-    <Compile Include="Crawler.fs" />
-    <Compile Include="PageSpeed.fs" />
-    <Compile Include="Robots.fs" />
     <Compile Include="Violations.fs" />
+    <Compile Include="PageSpeed.fs" />
     <None Include="packages.config" />
     <None Include="Script.fsx" />
   </ItemGroup>

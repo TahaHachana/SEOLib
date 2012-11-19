@@ -4,6 +4,7 @@ open System
 open SEOLib
 open SEOLib.Types
 
+
 //============
 // Html module
 //============
@@ -63,3 +64,14 @@ let externalLinks =
     links
     |> List.filter (fun x -> x.Type = External)
     |> List.iter (fun x -> printfn "%s" x.URL)
+
+//==================
+// Violations module
+//==================
+
+let uri = Uri "http://www.websharper.com/home"
+
+let altAttributeViolations =
+    Violations.auditHtml html uri
+    |> Async.RunSynchronously
+    |> Array.concat

@@ -56,6 +56,53 @@ module Types =
             Follow : Follow
         }
 
+   type ViolationLevel =
+        | Error
+//        | Information
+        | Warning
+
+    type ViolationCategory =
+        | Content
+        | Performance
+        | SEO
+        | Standards
+
+    type ViolationCode =
+        | AltEmpty
+        | AltMissing
+        | DescriptionEmpty
+        | DescriptionLong
+        | DescriptionMissing
+        | DescriptionMultiple
+        | DescriptionShort
+        | H1Empty
+        | H1Missing
+        | H1Multiple
+//        | InvalidMarkup
+        | LargeInlineCss
+        | LargeInlineScript
+//        | NoIndex
+        | QueryParameterCount
+        | RefreshToRedirect
+        | TitleEqDescription
+        | TitleEmpty
+        | TitleLong
+        | TitleMissing
+        | TitleShort
+        | TooManyLinks
+
+    type Violation =
+        {
+            Category       : ViolationCategory
+            Code           : ViolationCode
+            Description    : string
+            Heading        : string
+            Index          : int option
+            Level          : ViolationLevel
+            Recommendation : string
+        }
+
+
 //
 //open System
 //open System.Net.Http.Headers
