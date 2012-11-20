@@ -102,6 +102,28 @@ module Types =
             Recommendation : string
         }
 
+    type Validity = Valid | Invalid
+
+    type MarkupError =
+        {
+            Line        : string option
+            Col         : string option
+            Message     : string
+            MessageId   : string
+            Explanation : string option
+            Source      : string option
+        }
+
+    type MarkupValidation =
+        {
+            Doctype : string
+            Charset : string
+            ValidityStatus : Validity
+            ErrorCount : int
+            WarningCount : int
+            Errors : MarkupError list option
+            Warnings : MarkupError list option
+        }
 
 //
 //open System

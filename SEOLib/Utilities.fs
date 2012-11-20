@@ -6,6 +6,8 @@ open System.Net.Http
 open System.Net.Http.Headers
 open System.Text
 open System.Text.RegularExpressions
+open System.Xml.Linq
+open System.Web
 open Types
 open StopWords
 
@@ -683,7 +685,80 @@ module internal Utilities =
                     (sndGroupValue' titleMatch |> checkEmptyString', titleMatch.Index)
                     |> Some
 
+    [<AutoOpen>]
+    module Validator =
 
+        let validatorUri = "http://validator.w3.org/check?uri="
+
+        let buildUri (uriString : string) =
+            let uriString' = HttpUtility.UrlEncode uriString
+            String.concat "" [validatorUri; uriString'; "&output=soap12"]
+
+        let loadXdocument (uriString : string) =
+            try
+                XDocument.Load uriString |> Some
+            with _ -> None
+
+        let findByLocalname (xelements : XElement seq) localname =
+            xelements
+            |> Seq.find (fun x -> x.Name.LocalName = localname)
+            |> fun x -> x.Value
+
+        let tryFindByLocalname (xelements : XElement seq) localname =
+            xelements
+            |> Seq.tryFind (fun x -> x.Name.LocalName = localname)
+            |> function
+                | None   -> None
+                | Some x -> Some x.Value
+    
+        let filterByLocalname (xelements : XElement seq) localname =
+            xelements
+            |> Seq.filter (fun x -> x.Name.LocalName = localname)
+            |> Seq.toList
+
+        let makeMarkupError line col message messageId explanation source =
+            {
+                Line = line
+                Col = col
+                Message = message
+                MessageId = messageId
+                Explanation = explanation
+                Source = source
+            }
+
+        let optionValue (x : 'T option) = x.Value
+
+        let collectMarkupErrorData (xelement : XElement) =
+            let descendants = xelement.Descendants ()
+            let findByLocalname' = tryFindByLocalname descendants
+            let line = findByLocalname' "line"
+            let col = findByLocalname' "col"
+            let message = findByLocalname' "message" |> optionValue
+            let messageId = findByLocalname' "messageid" |> optionValue
+            let explanation = findByLocalname' "explanation"
+            let source = findByLocalname' "source"
+            makeMarkupError line col message messageId explanation source
+    
+        let collectMarkupErrors xelements localname count =
+            match count with
+                | 0 -> None
+                | _ ->
+                    filterByLocalname xelements localname
+                    |> List.map collectMarkupErrorData
+                    |> function
+                        | []  -> None
+                        | lst -> Some lst
+
+        let makeMarkupValidation doctype charset validity errorCount warningCount errors warnings =
+            {
+                Doctype = doctype
+                Charset = charset
+                ValidityStatus = validity
+                ErrorCount = errorCount
+                WarningCount = warningCount
+                Errors = errors
+                Warnings = warnings
+            }
 
 
 

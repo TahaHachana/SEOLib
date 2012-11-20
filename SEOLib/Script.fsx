@@ -75,3 +75,9 @@ let altAttributeViolations =
     Violations.auditHtml html uri
     |> Async.RunSynchronously
     |> Array.concat
+
+//=================
+// Validator module
+//=================
+
+let validationResult = Validator.validateUri "http://www.websharper.com/home"
