@@ -11,6 +11,18 @@ Demo App
 
 http://openseo.apphb.com/
 
+NuGet
+-----
+
+	PM> Install-Package SEOLib
+
+The PageSpeed module depends on the [Google APIs client library for .NET](http://code.google.com/p/google-api-dotnet-client/).
+
+Usage
+-----
+
+Check out the [F# script file](https://github.com/TahaHachana/SEOLib/blob/master/SEOLib/Script.fsx).
+
 MIT License
 -----------
 
