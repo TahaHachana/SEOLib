@@ -72,7 +72,7 @@ module Violations =
                     | _ -> [| makeH1MultipleViolation None |]
         }
 
-    /// <summary>Returns violations related to CSS code in a HTML document.</summary>
+    /// <summary>Returns violations related to inline CSS in a HTML document.</summary>
     /// <param name="html">The HTML document.</param>
     /// <returns>The CSS related warnings.</returns>
     let checkInlineCss html =
@@ -81,7 +81,7 @@ module Violations =
                 f inlineCssRegex html makeLargeInlineCssViolation
         }
 
-    /// <summary>Returns violations related to JavaScript code in a HTML document.</summary>
+    /// <summary>Returns violations related to inline JavaScript in a HTML document.</summary>
     /// <param name="html">The HTML document.</param>
     /// <returns>The JavaScript related warnings.</returns>
     let checkInlineScript html =
@@ -140,7 +140,7 @@ module Violations =
 
     /// <summary>Checks the number of links in a HTML document.</summary>
     /// <param name="html">The HTML document.</param>
-    /// <returns>A too many links violations if their count exceeds 250.</returns>
+    /// <returns>A too many links violation if their count exceeds 250.</returns>
     let checkLinks html =
         async {
             let aTagsCount = regexMatches aTagRegex html |> Seq.length

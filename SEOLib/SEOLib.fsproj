@@ -34,6 +34,12 @@
     <DocumentationFile>bin\Release\SEOLib.XML</DocumentationFile>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Google.Apis">
+      <HintPath>..\..\..\..\Desktop\google-api-dotnet-client-1.2.4696-beta.binary\Lib\Google.Apis.dll</HintPath>
+    </Reference>
+    <Reference Include="Google.Apis.Pagespeedonline.v1">
+      <HintPath>..\..\..\..\Desktop\google-api-dotnet-client-1.2.4696-beta.binary\Services\PagespeedonlineService\Google.Apis.Pagespeedonline.v1.dll</HintPath>
+    </Reference>
     <Reference Include="mscorlib" />
     <Reference Include="FSharp.Core" />
     <Reference Include="System" />

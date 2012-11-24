@@ -4,7 +4,6 @@ open System
 open SEOLib
 open SEOLib.Types
 
-
 //============
 // Html module
 //============
@@ -34,20 +33,16 @@ let hs = Html.headings html
 
 let keywords = Keywords.analyzeKeywords html
 
-let oneKeyword =
+let printKeywordData (keywords : Keyword []) count =
     keywords
-    |> Array.filter (fun x -> x.WordsCount = 1)
+    |> Array.filter (fun x -> x.WordsCount = count)
     |> Array.iter (fun x -> printfn "%s, %d, %f" x.Combination x.Occurrence x.Density)
 
-let twoKeywords =
-    keywords
-    |> Array.filter (fun x -> x.WordsCount = 2)
-    |> Array.iter (fun x -> printfn "%s, %d, %f" x.Combination x.Occurrence x.Density)
+let printKeywordData' = printKeywordData keywords
 
-let threeKeywords =
-    keywords
-    |> Array.filter (fun x -> x.WordsCount = 3)
-    |> Array.iter (fun x -> printfn "%s, %d, %f" x.Combination x.Occurrence x.Density)
+let oneKeyword = printKeywordData' 1
+let twoKeywords = printKeywordData' 2
+let threeKeywords = printKeywordData' 3
 
 //================
 // Links module
@@ -71,7 +66,7 @@ let externalLinks =
 
 let uri = Uri "http://www.websharper.com/home"
 
-let altAttributeViolations =
+let violations =
     Violations.auditHtml html uri
     |> Async.RunSynchronously
     |> Array.concat
@@ -80,4 +75,22 @@ let altAttributeViolations =
 // Validator module
 //=================
 
+let status =
+    Validator.isValid "http://www.websharper.com/home"
+    |> Async.RunSynchronously
+
 let validationResult = Validator.validateUri "http://www.websharper.com/home"
+
+//=================
+// PageSpeed module
+//=================
+#r @"..\SEOLib\bin\Release\Google.Apis.Pagespeedonline.v1.dll"
+
+let service = PageSpeed.createPagespeedService ""
+let pagespeedResult = PageSpeed.runPagespeed service "http://fsharp.org" |> Async.RunSynchronously
+let etag = PageSpeed.resultEtag pagespeedResult
+let requestUri = PageSpeed.getRequestUri pagespeedResult
+let stats = PageSpeed.pagespeedStats pagespeedResult
+let statusCode = PageSpeed.getResponseCode pagespeedResult
+let score = PageSpeed.getScore pagespeedResult
+let rules = PageSpeed.pagespeedRules pagespeedResult

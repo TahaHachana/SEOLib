@@ -1,15 +1,30 @@
 ﻿namespace SEOLib
 
-#if INTERACTIVE
-#r "System.Xml.Linq"
-#endif
-
-open System.Xml.Linq
-open System.Web
-open Types
+open System
 open Utilities
 
 module Validator =
+
+    /// <summary>Checks if a URI is valid. This is a quick validation way because
+    /// only the HTTP response is parsed.</summary>
+    /// <param name="uriString">The URI to validate.</param>
+    /// <returns>The validty status of the specified URI.</returns>
+    let isValid uriString =
+        async {
+            try
+                let uriString' = Uri(buildUri uriString)
+                let client = httpClient ()
+                let! httpResponse = awaitHttpResponse client uriString'
+                let status =
+                    httpResponse.Headers.GetValues "X-W3C-Validator-Status"
+                    |> Seq.nth 0
+                    |> function
+                        | "Invalid" -> Invalid
+                        | _         -> Valid
+                    |> Some
+                return status
+            with _ -> return None
+        }
 
     /// <summary>Validates the markup of a HTML page.</summary>
     /// <param name="uriString">The URI to validate.</param>
@@ -34,4 +49,3 @@ module Validator =
                 let warnings = collectMarkupErrors' "warning" warningCount
                 makeMarkupValidation doctype charset validity errorCount warningCount errors warnings
                 |> Some
-

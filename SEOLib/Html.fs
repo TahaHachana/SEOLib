@@ -1,7 +1,6 @@
 ﻿namespace SEOLib
 
 open System.Text.RegularExpressions
-open Types
 open Utilities
 
 module Html =
@@ -42,4 +41,6 @@ module Html =
         |> Seq.cast<Match>
         |> Seq.toList
         |> List.map (fun x ->
-            makeHeading (sndGroupValue' x) (trdGroupValue' x))
+            let sndGroup = sndGroupValue' x
+            let trdGroup = trdGroupValue' x
+            makeHeading sndGroup trdGroup)

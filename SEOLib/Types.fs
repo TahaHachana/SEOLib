@@ -21,8 +21,8 @@ module Types =
 
     type Header =
         {
-            Key: string
-            Value: string list
+            Key   : string
+            Value : string list
         }
 
     type HttpData =
@@ -58,7 +58,6 @@ module Types =
 
    type ViolationLevel =
         | Error
-//        | Information
         | Warning
 
     type ViolationCategory =
@@ -78,10 +77,8 @@ module Types =
         | H1Empty
         | H1Missing
         | H1Multiple
-//        | InvalidMarkup
         | LargeInlineCss
         | LargeInlineScript
-//        | NoIndex
         | QueryParameterCount
         | RefreshToRedirect
         | TitleEqDescription
@@ -116,166 +113,42 @@ module Types =
 
     type MarkupValidation =
         {
-            Doctype : string
-            Charset : string
-            ValidityStatus : Validity
-            ErrorCount : int
+            Doctype      : string
+            Charset      : string
+            Status       : Validity
+            ErrorCount   : int
             WarningCount : int
-            Errors : MarkupError list option
-            Warnings : MarkupError list option
+            Errors       : MarkupError list option
+            Warnings     : MarkupError list option
         }
 
-//
-//open System
-//open System.Net.Http.Headers
-//open Google.Apis.Pagespeedonline.v1.Data
-//
-//module Types =
-//
-//    [<AutoOpenAttribute>]
-//    module HttpTypes =
-//
-//        type HttpData =
-//            {
-//                Location : Uri option
-//                Headers  : HttpResponseHeaders
-//                Content  : string
-//            }
-//
-//    [<AutoOpenAttribute>]
-//    module CrawlerTypes =
-//
-//        type Message =
-//            | Cancel
-//            | Done
-//            | Mailbox of MailboxProcessor<Message>
-//            | Stop
-//            | URL     of string option
-//
-//        type Agent<'T> = MailboxProcessor<'T>
-//
-//        type MessageAgent = Agent<Message>
-//
-//        type RogueMode = ON | OFF
-//
-//    [<AutoOpenAttribute>]
-//    module KeywordsTypes =
-//
-//        type Language =
-//            | English
-//            | French
-//
-//    [<AutoOpenAttribute>]
-//    module PageSpeedTypes =
-//
-//        type PSD  = Result.PageStatsData
-//
-//        type RRDS = Result.FormattedResultsData.RuleResultsData.RuleResultsDataSchema
-//
-//        type UBD  = RRDS.UrlBlocksData
-//
-//        type RD   = UBD.UrlsData.ResultData
-//
-//        type RuleResult =
-//            {
-//                RuleName   : string
-//                RuleImpact : float option
-//                RuleScore  : int
-//                Blocks     : UBD []
-//            }
-//
-//        type RuleData =
-//            {
-//                RuleName : string
-//                Impact   : float option
-//                Heading  : string
-//                Data     : string []
-//            }
-//
-//    [<AutoOpenAttribute>]
-//    module RobotsTypes =
-//
-//        type Bot =
-//            {
-//                Name       : string
-//                CrawlDealy : float option
-//                Allow      : string list
-//                Disallow   : string list
-//            }
-//
-//        type Permission = Allowed | Disallowed
-//
-//        type Follow = DoFollow | NoFollow
-//
-//        type RobotsDirectives =
-//            {
-//                Indexing  : Permission
-//                Following : Follow
-//            }
-//
-//        type WebPage =
-//            {
-//                Url     : string
-//                Headers : HttpResponseHeaders
-//                Html    : string
-//                Robots  : RobotsDirectives
-//            }
-//
-//    [<AutoOpenAttribute>]
-//    module ViolationsTypes =
-//
-//        type ViolationLevel =
-//            | Error
-//            | Information
-//            | Warning
-//
-//        type ViolationCategory =
-//            | Content
-//            | Performance
-//            | SEO
-//            | Standards
-//
-//        type ViolationCode =
-//            | AltEmpty
-//            | AltMissing
-//            | DescriptionEmpty
-//            | DescriptionLong
-//            | DescriptionMissing
-//            | DescriptionMultiple
-//            | DescriptionShort
-//            | H1Empty
-//            | H1Missing
-//            | H1Multiple
-//            | InvalidMarkup
-//            | LargeInlineCss
-//            | LargeInlineScript
-//            | NoIndex
-//            | QueryStringParameterCount
-//            | TitleAndDescriptionEquals
-//            | TitleEmpty
-//            | TitleLong
-//            | TitleMissing
-//            | TitleShort
-//            | TooManyLinks
-//            | UseOfRefreshToRedirect
-//
-//        type MarkupStatus =
-//            | Abort
-//            | Invalid of string * string
-//            | Valid
-//
-//        type Violation =
-//            {
-//                Category       : ViolationCategory
-//                Code           : ViolationCode
-//                Description    : string
-//                Heading        : string
-//                Level          : ViolationLevel
-//                Recommendation : string
-//            }
-//
-//        type Violation' =
-//            {
-//                V     : Violation
-//                Index : int option
-//            }
+    type Suggestion =
+        {
+            Header : string
+            Urls   : string list
+        }
+
+    type PagespeedStats =
+        {
+            CssBytes              : int
+            FlashBytes            : int
+            HtmlBytes             : int
+            ImageBytes            : int
+            JavascriptBytes       : int
+            NumberCssResources    : int64 option
+            NumberHosts           : int64 option
+            NumberJsResources     : int64 option
+            NumberResources       : int64 option
+            NumberStaticResourecs : int64 option
+            NumberTextBytes       : int
+            OtherBytes            : int
+            TotalRequestBytes     : int
+        }
+
+    type PagespeedRule =
+        {
+            Name        : string
+            Impact      : float option
+            Score       : int64 option
+            Suggestions : Suggestion list option
+        }

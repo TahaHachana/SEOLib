@@ -6,10 +6,11 @@ open System.Net.Http
 open System.Net.Http.Headers
 open System.Text
 open System.Text.RegularExpressions
-open System.Xml.Linq
 open System.Web
-open Types
+open System.Xml.Linq
+open Google.Apis.Pagespeedonline.v1.Data
 open StopWords
+open Types
 
 module internal Utilities =
 
@@ -17,9 +18,9 @@ module internal Utilities =
     module Html =
 
         /// Decodes HTML encoded characters.
-        let inline decodeHtml html = WebUtility.HtmlDecode html
+        let decodeHtml html = WebUtility.HtmlDecode html
 
-        let inline checkEmptyString str = match str with "" -> None | _ -> Some str
+        let checkEmptyString str = match str with "" -> None | _ -> Some str
         
         let checkEmptyString' = decodeHtml >> checkEmptyString
 
@@ -33,15 +34,15 @@ module internal Utilities =
         let inline groupValue' (idx : int) (matchObj : Match) =
             matchObj.Groups.[idx].Value.Trim()
 
-        let inline fstGroupValue regex str = groupValue 0 regex str
-        let inline sndGroupValue regex str = groupValue 1 regex str
-        let inline trdGroupValue regex str = groupValue 2 regex str
-        let inline frtGroupValue regex str = groupValue 3 regex str
+        let fstGroupValue regex str = groupValue 0 regex str
+        let sndGroupValue regex str = groupValue 1 regex str
+        let trdGroupValue regex str = groupValue 2 regex str
+        let frtGroupValue regex str = groupValue 3 regex str
 
-        let inline fstGroupValue' matchObj = groupValue' 0 matchObj
-        let inline sndGroupValue' matchObj = groupValue' 1 matchObj
-        let inline trdGroupValue' matchObj = groupValue' 2 matchObj
-        let inline frtGroupValue' matchObj = groupValue' 3 matchObj
+        let fstGroupValue' matchObj = groupValue' 0 matchObj
+        let sndGroupValue' matchObj = groupValue' 1 matchObj
+        let trdGroupValue' matchObj = groupValue' 2 matchObj
+        let frtGroupValue' matchObj = groupValue' 3 matchObj
 
         let attributePattern   = "(?i)(\w+)=(\"|')(.+?)(\"|')"
         let contentAttrPattern = "(?i)content"
@@ -61,20 +62,20 @@ module internal Utilities =
         let tagRegex         = compileRegex tagPattern
         let titleRegex       = compileRegex titlePattern
 
-        let inline makeHtmlAttribute key value : HtmlAttribute =
+        let makeHtmlAttribute key value : HtmlAttribute =
             {
                 Key   = key
                 Value = value
             }
 
-        let inline tagAttributes tag =
+        let tagAttributes tag =
             attributeRegex.Matches tag
             |> Seq.cast<Match>
             |> Seq.toArray
             |> Array.map (fun x ->
                 makeHtmlAttribute (sndGroupValue' x) (frtGroupValue' x))
 
-        let inline metaTag metaTags (regex : Regex) (regex' : Regex) =
+        let metaTag metaTags (regex : Regex) (regex' : Regex) =
             metaTags
             |> Array.tryFind regex.IsMatch
             |> function
@@ -105,25 +106,25 @@ module internal Utilities =
     module Http =
         
         // IE9 user-agent string.
-        let ie9UserAgent = "Mozilla/5.0 (Windows; U; MSIE 9.0; Windows NT 9.0; en-US)"
+        let ie10UserAgent = "Mozilla/5.0 (compatible; MSIE 10.0; Windows NT 6.2; Trident/6.0)"
     
         /// Initializes a HttpClient instance and adds a user-agent request header. 
-        let inline httpClient () =
+        let httpClient () =
             let client = new HttpClient()
-            client.DefaultRequestHeaders.Add("User-Agent", ie9UserAgent)
+            client.DefaultRequestHeaders.Add("User-Agent", ie10UserAgent)
             client.MaxResponseContentBufferSize <- int64 1073741824
             client
 
         /// Returns an asynchronous computation that will wait for the task of sending an async GET request to a Uri.
-        let inline awaitHttpResponse (client : HttpClient) (requestUri : Uri) = client.GetAsync requestUri |> Async.AwaitTask
+        let awaitHttpResponse (client : HttpClient) (requestUri : Uri) = client.GetAsync requestUri |> Async.AwaitTask
 
         /// Returns an asynchronous computation that will wait for the task of reading the content of a HTTP response message as a string.
-        let inline awaitReadAsString (httpContent : HttpContent) = httpContent.ReadAsStringAsync() |> Async.AwaitTask
+        let awaitReadAsString (httpContent : HttpContent) = httpContent.ReadAsStringAsync() |> Async.AwaitTask
 
         /// Initializes a Header instance.
-        let inline constructHeader key (value : string seq) = {Key = key; Value = Seq.toList value}
+        let constructHeader key (value : string seq) = {Key = key; Value = Seq.toList value}
         
-        let inline httpHeaders (responseHeaders : HttpResponseHeaders) (contentHeaders : HttpContentHeaders) =
+        let httpHeaders (responseHeaders : HttpResponseHeaders) (contentHeaders : HttpContentHeaders) =
             [
                 for x in responseHeaders do
                     yield constructHeader x.Key x.Value
@@ -241,23 +242,23 @@ module internal Utilities =
     [<AutoOpenAttribute>]
     module Links =
 
-        let absoluteUriPattern = "(?i)^https?://[^\"]*"
-        let aTagPattern = "(?is)(<a .+?>)(.+?)</a>"
-        let baseTagPattern = "(?is)<base.+?>"
-        let commentPattern = "(?s)<!--.*?--\s*>"
-        let hrefPattern = "(?i) href\\s*=\\s*(\"|')/?((?!#.*|/\B|mailto:|location\.|javascript:)[^\"'\#]+)(\"|'|\#)"
+        let absoluteUriPattern  = "(?i)^https?://[^\"]*"
+        let aTagPattern         = "(?is)(<a .+?>)(.+?)</a>"
+        let baseTagPattern      = "(?is)<base.+?>"
+        let commentPattern      = "(?s)<!--.*?--\s*>"
+        let hrefPattern         = "(?i) href\\s*=\\s*(\"|')/?((?!#.*|/\B|mailto:|location\.|javascript:)[^\"'\#]+)(\"|'|\#)"
         let relAttributePattern = "rel=(\"|')(.+?)(\"|')"
-        let noFollowPattern = "(?i)nofollow"
-        let inlineJsCssPattern = "<script.*?</script>|<style.*?</style>"
+        let noFollowPattern     = "(?i)nofollow"
+        let inlineJsCssPattern  = "<script.*?</script>|<style.*?</style>"
 
-        let absoluteUriRegex = compileRegex absoluteUriPattern
-        let aTagRegex = compileRegex aTagPattern
-        let baseTagRegex = compileRegex baseTagPattern
-        let commentRegex = compileRegex commentPattern
-        let hrefRegex = compileRegex hrefPattern    
+        let absoluteUriRegex  = compileRegex absoluteUriPattern
+        let aTagRegex         = compileRegex aTagPattern
+        let baseTagRegex      = compileRegex baseTagPattern
+        let commentRegex      = compileRegex commentPattern
+        let hrefRegex         = compileRegex hrefPattern    
         let relAttributeRegex = compileRegex relAttributePattern
-        let noFollowRegex = compileRegex noFollowPattern
-        let inlineJsCssRegex = compileRegex inlineJsCssPattern
+        let noFollowRegex     = compileRegex noFollowPattern
+        let inlineJsCssRegex  = compileRegex inlineJsCssPattern
 
         /// Returns the href attribute value of the <base> tag in a HTML document.
         let baseUri html requestUri =
@@ -718,12 +719,12 @@ module internal Utilities =
 
         let makeMarkupError line col message messageId explanation source =
             {
-                Line = line
-                Col = col
-                Message = message
-                MessageId = messageId
+                Line        = line
+                Col         = col
+                Message     = message
+                MessageId   = messageId
                 Explanation = explanation
-                Source = source
+                Source      = source
             }
 
         let optionValue (x : 'T option) = x.Value
@@ -749,237 +750,126 @@ module internal Utilities =
                         | []  -> None
                         | lst -> Some lst
 
-        let makeMarkupValidation doctype charset validity errorCount warningCount errors warnings =
+        let makeMarkupValidation doctype charset status errorCount warningCount errors warnings =
             {
-                Doctype = doctype
-                Charset = charset
-                ValidityStatus = validity
-                ErrorCount = errorCount
+                Doctype      = doctype
+                Charset      = charset
+                Status       = status
+                ErrorCount   = errorCount
                 WarningCount = warningCount
-                Errors = errors
-                Warnings = warnings
+                Errors       = errors
+                Warnings     = warnings
             }
 
+    [<AutoOpen>]
+    module PageSpeed =
 
+        let getPageStats (result : Result) = result.PageStats
 
+        let testNull = function null -> 0 | (x : string) -> int x
+    
+        let testNullable (nullable : Nullable<'T>) =
+            match nullable.HasValue with
+                | false -> None
+                | true  -> Some nullable.Value
 
+        let getCssBytes (stats : Result.PageStatsData) = testNull stats.CssResponseBytes
+        let getFlashBytes (stats : Result.PageStatsData) = testNull stats.FlashResponseBytes
+        let getHtmlBytes (stats : Result.PageStatsData) = testNull stats.HtmlResponseBytes
+        let getImageBytes (stats : Result.PageStatsData) = testNull stats.ImageResponseBytes
+        let getJavascriptBytes (stats : Result.PageStatsData) = testNull stats.JavascriptResponseBytes
+        let getNumberCssResource (stats : Result.PageStatsData) = testNullable stats.NumberCssResources
+        let getNumberHosts (stats : Result.PageStatsData) = testNullable stats.NumberHosts
+        let getNumberJsResources (stats : Result.PageStatsData) = testNullable stats.NumberJsResources
+        let getNumberResources (stats : Result.PageStatsData) = testNullable stats.NumberResources
+        let getNumberStaticResourecs (stats : Result.PageStatsData) = testNullable stats.NumberStaticResources
+        let getNumberTextBytes (stats : Result.PageStatsData) = testNull stats.TextResponseBytes
+        let getOtherBytes(stats : Result.PageStatsData) = testNull stats.OtherResponseBytes
+        let getTotalRequestBytes (stats : Result.PageStatsData) = testNull stats.TotalRequestBytes
 
+        let makePagespeedStats cssBytes flashBytes htmlBytes imageBytes javascriptBytes numberCssResources numberHosts numberJsResources numberResources numberStaticResources numberTextBytes otherBytes totalBytes =
+            {
+                CssBytes              = cssBytes
+                FlashBytes            = flashBytes
+                HtmlBytes             = htmlBytes
+                ImageBytes            = imageBytes
+                JavascriptBytes       = javascriptBytes
+                NumberCssResources    = numberCssResources
+                NumberHosts           = numberHosts
+                NumberJsResources     = numberJsResources
+                NumberResources       = numberResources
+                NumberStaticResourecs = numberStaticResources
+                NumberTextBytes       = numberTextBytes
+                OtherBytes            = otherBytes
+                TotalRequestBytes     = totalBytes
+            }
 
-//    let htmlTagPattern         = "(?i)<[^>]*>"
-//    let metaDescriptionPattern = "(?i)name=('|\")description('|\")"
-//    let metaKeywordsPattern    = "(?i)name=('|\")keywords('|\")"
-//
-//    let htmlTagRegex         = compileRegex htmlTagPattern
-//    let metaDescriptionRegex = compileRegex metaDescriptionPattern
-//    let metaKeywordsRegex    = compileRegex metaKeywordsPattern
+        let testNull' = function null -> None | x -> Seq.toList x |> Some
 
-//
-//open System
-//open System.IO
-//open System.Net
-//open System.Net.Http
-//open System.Text.RegularExpressions
-//open Types
-//
-//module internal Utilities =
-//
-//    /// Compiles a regex.
-//    let compileRegex pattern = Regex(pattern, RegexOptions.Compiled)
-//
-//    /// Rounds the third element of a tuple.
-//    let roundThird (x, y, z : float) = x, y, Math.Round(z, 2)
-//
-//    /// Returns the value of a Nullable<int> and zero if doesn't have one.
-//    let hasValue (nullable : Nullable<int64>) =
-//        nullable.HasValue |> function
-//            | false -> 0
-//            | true  -> nullable.Value |> int
-//
-//    /// Optionally returns the value of a Nullable<int>.
-//    let hasValue' (nullable : Nullable<int64>) =
-//        nullable.HasValue |> function
-//            | false -> None
-//            | true  -> nullable.Value |> int |> Some
-//
-//    let testNull = function null -> 0 | (x : string) -> int x
-//
-//    // Regex patterns.
-//    let absoluteUriPattern   = "(?i)^https?://[^\"]*"
-//    let altAttributePattern  = "(?i)alt=(\"|')(.+?)(\"|')"
-//    let aTagPattern          = "(?i)<a.+?>"
-//    let commentJSCssPattern  = "(?is)<!--.*?--\s*>|<script.*?</script>|<style.*?</style>"
-//    let crawlDelayPattern    = "(?i)^crawl-delay:(.+)"
-//    let googleBotPattern     = "(?i)googlebot"
-//    let h1TagPattern         = "(?is)<h1>(.+?)</h1>"
-//    let hrefPattern          = "(?i)href\\s*=\\s*(\"|')/?((?!#.*|/\B|mailto:|location\.|javascript:)[^\"'\#]+)(\"|'|\#)"
-//    let htmlContentPattern   = "(?i)html"
-//    let htmlTagPattern       = "(?i)<[^>]*>"
-//    let imgTagPattern        = "(?is)<img.+?>"
-//    let inlineCssPattern     = "(?is)<style.*?</style>"
-//    let inlineJsPattern      = "(?is)<script.*?</script>"
-//    let metaContentPattern   = "content=(\"|')(.+)(\"|')"
-//    let metaDescContPattern  = "(?is)content=(\"|')(.+?)(\"|')"
-//    let metaDescPattern      = "(?i)name=(\"|')description(\"|')"
-//    let metaRefreshPattern   = "(?i)http-equiv=(\"|')refresh(\"|')"
-//    let metaRobotsPattern    = "(?i)robots"
-//    let metaTagPattern       = "(?i)<meta.+?>"
-//    let noFollowPattern      = "(?i)nofollow"
-//    let noIndexPattern       = "(?i)noindex"
-//    let noneDirecitvePattern = "(?i)none"
-//    let oneWordPattern       = "[^0-9\W]+"
-//    let relAttributePattern  = "rel=(\"|')(.?)(\"|')"
-//    let robotsAllowPattern   = "(?i)^allow:(.+)"
-//    let robotsCommentPattern = "^#"
-//    let robotsDAllowPattern  = "(?i)^disallow:(.+)"
-//    let threeWordsPattern    = "[^0-9\W]+ [^0-9\W]+ [^0-9\W]+"
-//    let titleTagPattern      = "(?is)<title>(.+?)</title>"
-//    let twoWordsPattern      = "[^0-9\W]+ [^0-9\W]+"
-//    let userAgentPattern     = ".+?:"
-//    let userAgentPattern'    = "(?i)^user-agent"
-//    let userAgentPattern''   = "(?i)^user-agent:(.+)"
-//
-//    // Regex objects.
-//    let absoluteUriRegex   = compileRegex absoluteUriPattern
-//    let altAttributeRegex  = compileRegex altAttributePattern
-//    let anchorRegex        = compileRegex aTagPattern
-//    let commentJSCssRegex  = compileRegex commentJSCssPattern
-//    let crawlDelayRegex    = compileRegex crawlDelayPattern
-//    let googleBotRegex     = compileRegex googleBotPattern
-//    let h1TagRegex         = compileRegex h1TagPattern
-//    let hrefRegex          = compileRegex hrefPattern
-//    let htmlRegex          = compileRegex htmlContentPattern
-//    let htmlTagRegex       = compileRegex htmlTagPattern
-//    let imgTagRegex        = compileRegex imgTagPattern
-//    let inlineCssRegex     = compileRegex inlineCssPattern
-//    let inlineJsRegex      = compileRegex inlineJsPattern
-//    let metaContentRegex   = compileRegex metaContentPattern
-//    let metaDescContRegex  = compileRegex metaDescContPattern
-//    let metaDescRegex      = compileRegex metaDescPattern
-//    let metaRefreshRegex   = compileRegex metaRefreshPattern
-//    let metaRobotsRegex    = compileRegex metaRobotsPattern
-//    let metaTagRegex       = compileRegex metaTagPattern
-//    let noFollowRegex      = compileRegex noFollowPattern
-//    let noIndexRegex       = compileRegex noIndexPattern
-//    let noneRegex          = compileRegex noneDirecitvePattern
-//    let oneKeywordRegex    = compileRegex oneWordPattern
-//    let relAttributeRegex  = compileRegex relAttributePattern
-//    let robotsAllowRegex   = compileRegex robotsAllowPattern
-//    let robotsCommentRegex = compileRegex robotsCommentPattern
-//    let robotsDAllowRegex  = compileRegex robotsDAllowPattern
-//    let threeKeywordsRegex = compileRegex threeWordsPattern
-//    let titleTagRegex      = compileRegex titleTagPattern
-//    let twoKeywordsRegex   = compileRegex twoWordsPattern
-//    let userAgentRegex     = compileRegex userAgentPattern
-//    let userAgentRegex'    = compileRegex userAgentPattern''
-//
-//    /// Compiles an internal link regex for the given URI host.
-//    let internalLinkRegex host =
-//        let host' = Regex.Escape host
-//        let pattern = "(?i)^https?://" + host'
-//        compileRegex pattern
-//
-//    /// Splits a string list at elements that satisfy a regex pattern.
-//    let splitAtPattern pattern lst =
-//        let strLst = List.empty
-//        let regex  = compileRegex pattern
-//        let rec split lst acc b strLst =
-//            match lst with
-//                | h :: t ->
-//                    let isMatch = regex.IsMatch h
-//                    match isMatch with
-//                        | true ->
-//                            match b with
-//                                | true ->
-//                                    let acc' = h :: acc
-//                                    split t acc' false strLst
-//                                | false ->
-//                                    let acc' = List.rev acc
-//                                    let strLst' = acc' :: strLst
-//                                    split t [h] true strLst'
-//                        | false ->
-//                            let acc' = h :: acc
-//                            split t acc' false strLst
-//                | [] ->
-//                    let acc' = List.rev acc
-//                    acc' :: strLst
-//        split lst [] true strLst
-//
-//    /// Attempts to match a string with a regex.
-//    let matchOption (regex : Regex) str =
-//        let regexMatch = regex.Match str
-//        match regexMatch.Success with
-//            | true  -> Some regexMatch
-//            | false -> None
-//
-//    /// Returns the trimmed value of a group in a match object.
-//    let groupValue (regexMatch : Match) (idx : int) = regexMatch.Groups.[idx].Value.Trim()
-//
-//    /// Returns the count of a match collection converted to float.
-//    let matchCount (matchCollection : Match seq) = matchCollection |> Seq.length |> float
-//
-//    /// Matches a sting with a regex pattern.
-//    let regexMatches (regex : Regex) str = regex.Matches str |> Seq.cast<Match>
-//
-//    let altAttribute (imgTagMatch : Match) =
-//        let value = imgTagMatch.Value
-//        let index = imgTagMatch.Index
-//        let altMatch = altAttributeRegex.Match value
-//        altMatch.Success |> function
-//            | true ->
-//                let alt = groupValue altMatch 2 |> Some
-//                value, index, alt
-//            | false -> value, index, None
-//
-//    let constructViolation v i =
-//        {
-//            V = v
-//            Index = i
-//        }
-//
-//    let constructViolation' v i description (arg : obj) =
-//        let violation = constructViolation v i
-//        let description = String.Format(description, arg)
-//        {
-//            violation with
-//                V = { violation.V with Description = description }
-//        }
-//
-//    let constructViolation'' v i description (args : obj []) =
-//        let violation = constructViolation v i
-//        let description = String.Format(description, args)
-//        {
-//            violation with
-//                V = { violation.V with Description = description }
-//        }
-//
-//    let w3cValidatorUri = "http://validator.w3.org/check?uri="
-//
-//    /// Decodes HTML encoded characters..
-//    let decodeHtml html = WebUtility.HtmlDecode html
-//
-//    /// Calculates the density of a keyword.
-//    let computeDensity count count' length = float count / count' * 100. * length
-//
-//    /// Returns the host of a URL.
-//    let hostFromUrl url =
-//        let uri = Uri url
-//        uri.Host
-//
-//    /// Returns an asynchronous computation that will wait for the task of sending an async GET request to a Uri.
-//    let awaitHttpResponse (client : HttpClient) (requestUri : Uri) = client.GetAsync requestUri |> Async.AwaitTask
-//
-//    /// Returns an asynchronous computation that will wait for the task of sending an async GET request to a Uri.
-//    let awaitHttpResponse' (client : HttpClient) (requestUrl : string) = client.GetAsync requestUrl |> Async.AwaitTask
-//    
-//    /// Returns an asynchronous computation that will wait for the task of reading the content of a HTTP response message as a string.
-//    let awaitReadAsString (response : HttpResponseMessage) = response.Content.ReadAsStringAsync() |> Async.AwaitTask
-//
-//    /// IE9's user-agent string.
-//    let ie9UserAgent = "Mozilla/5.0 (Windows; U; MSIE 9.0; Windows NT 9.0; en-US)"
-//
-//    /// Initializes a HttpClient instance, sets its timeout property to the specified value and adds a user-agent request header. 
-//    let httpClient timeout =
-//        let client = new HttpClient()
-//        client.Timeout <- TimeSpan(0, 0, timeout)
-//        client.DefaultRequestHeaders.Add("user-agent", ie9UserAgent)
-//        client
+        let regex = compileRegex "\$\d+"
+
+        let rec updateString str (lst : string list) idx =
+            match lst with
+            | h :: t ->
+                let str' = regex.Replace(str, h, 1)
+                let idx' = idx + 1
+                updateString str' t idx'
+            | [] -> str
+
+        let makeSuggestion header urls =
+            {
+                Header = header
+                Urls   = urls
+            }
+
+        let nullToOption = function null -> None | x -> Some x
+
+        let formatUrlData (urlData : Result.FormattedResultsData.RuleResultsData.RuleResultsDataSchema.UrlBlocksData.UrlsData.ResultData) =
+            let format = urlData.Format      
+            let argsOption = nullToOption urlData.Args
+            match argsOption with
+                | None -> format
+                | Some args ->
+                    let args' = args |> Seq.map (fun x -> x.Value) |> Seq.toList
+                    updateString format args' 0
+
+        let getUrlData (urls : seq<Result.FormattedResultsData.RuleResultsData.RuleResultsDataSchema.UrlBlocksData.UrlsData>) =
+            match urls with
+                | null -> []
+                | urls ->
+                    urls
+                    |> Seq.toList
+                    |> List.map (fun x -> x.Result)
+            |> List.map formatUrlData
+
+        let formatUrlBlocksData (urlBlocksData : Result.FormattedResultsData.RuleResultsData.RuleResultsDataSchema.UrlBlocksData) =
+            let header = urlBlocksData.Header
+            let argsOption = nullToOption header.Args
+            let format = header.Format
+            let format' =
+                match argsOption with
+                    | None -> format
+                    | Some args ->
+                        let args' = args |> Seq.map (fun x -> x.Value) |> Seq.toList
+                        updateString format args' 0
+            let urlData = getUrlData urlBlocksData.Urls
+            makeSuggestion format' urlData
+
+        let makePageSpeedRule (ruleResult : Result.FormattedResultsData.RuleResultsData.RuleResultsDataSchema) =
+            let name = ruleResult.LocalizedRuleName
+            let impact = testNullable ruleResult.RuleImpact
+            let score = testNullable ruleResult.RuleScore
+            let suggestions =
+                testNull' ruleResult.UrlBlocks
+                |> function
+                    | None -> None
+                    | Some lst ->
+                        lst
+                        |> List.map formatUrlBlocksData
+                        |> Some
+            {
+                Name        = name
+                Impact      = impact
+                Score       = score
+                Suggestions = suggestions
+            }

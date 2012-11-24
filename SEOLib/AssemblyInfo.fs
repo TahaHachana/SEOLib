@@ -8,9 +8,9 @@ module AssemblyInfo =
 
     [<AssemblyCopyright("Copyright Taha Hachana 2012")>]
     [<AssemblyDescription("SEO library.")>]
-    [<AssemblyFileVersion("0.4.0.0")>]
+    [<AssemblyFileVersion("0.5.0.0")>]
     [<AssemblyProduct("SEOLib")>]
     [<AssemblyTitle("SEOLib")>]
-    [<AssemblyVersion("0.4.83.36")>]
+    [<AssemblyVersion("0.5.98.39")>]
 
     do ()
