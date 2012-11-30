@@ -1,5 +1,9 @@
 ﻿namespace SEOLib
 
+#if INTERACTIVE
+#r "System.Net.Http"
+#endif
+
 open System
 open System.Net
 open System.Net.Http
@@ -219,7 +223,7 @@ module internal Utilities =
             let matchCollection = regexMatches regex str
             keywordData matchCollection str count length
 
-        let commentJSCssPattern = "(?is)<!--.*?--\s*>|<script.*?</script>|<style.*?</style>"
+        let commentJSCssPattern = "(?is)(<!--.*?--\s*>|<script.*?</script>|<style.*?</style>)"
         let oneWordPattern      = @"\b\w+\b"
         let twoWordsPattern     = @"\b\w+\b \b\w+\b"
         let threeWordsPattern   = @"\b\w+\b \b\w+\b \b\w+\b"
@@ -249,7 +253,7 @@ module internal Utilities =
         let hrefPattern         = "(?i) href\\s*=\\s*(\"|')/?((?!#.*|/\B|mailto:|location\.|javascript:)[^\"'\#]+)(\"|'|\#)"
         let relAttributePattern = "rel=(\"|')(.+?)(\"|')"
         let noFollowPattern     = "(?i)nofollow"
-        let inlineJsCssPattern  = "<script.*?</script>|<style.*?</style>"
+        let inlineJsCssPattern  = "(?is)(<script.*?</script>|<style.*?</style>)"
 
         let absoluteUriRegex  = compileRegex absoluteUriPattern
         let aTagRegex         = compileRegex aTagPattern

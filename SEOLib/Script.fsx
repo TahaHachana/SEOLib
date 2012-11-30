@@ -27,6 +27,9 @@ let metakeysOption = Html.metaKeywords metaTags
 // headings
 let hs = Html.headings html
 
+// text/HTML ratio
+let ratio = Html.textHtmlRatio html
+
 //================
 // Keywords module
 //================

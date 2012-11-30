@@ -42,5 +42,27 @@ module Html =
         |> Seq.toList
         |> List.map (fun x ->
             let sndGroup = sndGroupValue' x
-            let trdGroup = trdGroupValue' x
+            let trdGroup = trdGroupValue' x |> decodeHtml
             makeHeading sndGroup trdGroup)
+
+    let private stripHtml html =
+        commentJSCssRegex.Replace(html, "")
+        |> stripTags
+        
+    let private stripSpaces html =
+        let regex = compileRegex "(\n|\r)"
+        let regex' = compileRegex " {2,}"
+        regex.Replace(html, " ")
+        |> fun x -> regex'.Replace(x, " ")
+    
+    let private f = stripHtml >> stripSpaces >> decodeHtml
+
+    /// <summary>Calculates the text/HTML ratio in a HTML document.</summary>
+    /// <param name="html">The HTML document.</param>
+    /// <returns>The text/HTML ratio.</returns>
+    let textHtmlRatio html =
+        let textLength =
+            let text = f html //stripHtml html |> stripSpaces |> decodeHtml
+            float text.Length
+        let htmlLength = float html.Length
+        textLength / htmlLength * 100. |> round

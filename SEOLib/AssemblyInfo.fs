@@ -11,6 +11,6 @@ module AssemblyInfo =
     [<AssemblyFileVersion("0.5.0.0")>]
     [<AssemblyProduct("SEOLib")>]
     [<AssemblyTitle("SEOLib")>]
-    [<AssemblyVersion("0.5.98.39")>]
+    [<AssemblyVersion("0.5.102.41")>]
 
     do ()
