@@ -33,6 +33,10 @@ module Html =
     let metaKeywords metaTags =
         metaTag metaTags metaKeysRegex contentAttrRegex
 
+    let private stripHtml html =
+        commentJSCssRegex.Replace(html, "")
+        |> stripTags
+
     /// <summary>Returns the headings of a HTML document.</summary>
     /// <param name="html">The HTML document.</param>
     /// <returns>The headings of the document.</returns>    
@@ -42,12 +46,10 @@ module Html =
         |> Seq.toList
         |> List.map (fun x ->
             let sndGroup = sndGroupValue' x
-            let trdGroup = trdGroupValue' x |> decodeHtml
-            makeHeading sndGroup trdGroup)
-
-    let private stripHtml html =
-        commentJSCssRegex.Replace(html, "")
-        |> stripTags
+            let trdGroup = trdGroupValue' x |> stripHtml |> decodeHtml
+            sndGroup, trdGroup)
+        |> List.filter (fun (_, x) -> x.Length > 0)
+        |> List.map (fun (x, y) -> makeHeading x y)
         
     let private stripSpaces html =
         let regex = compileRegex "(\n|\r)"

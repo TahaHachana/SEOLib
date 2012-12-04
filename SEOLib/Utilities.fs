@@ -48,7 +48,7 @@ module internal Utilities =
         let trdGroupValue' matchObj = groupValue' 2 matchObj
         let frtGroupValue' matchObj = groupValue' 3 matchObj
 
-        let attributePattern   = "(?i)(\w+)=(\"|')(.+?)(\"|')"
+        let attributePattern   = "(?i)(\w+)=(\"|')(.+?)(\"|')\W"
         let contentAttrPattern = "(?i)content"
         let headingPattern     = "(?is)<h([1-6])>(.+?)</h[1-6]>"
         let metaDescPattern    = "(?i)name=(\"|')description(\"|')"
