@@ -1,6 +1,7 @@
 ﻿namespace SEOLib
 
 open System
+open Google.Apis.Services
 open Google.Apis.Pagespeedonline.v1
 open Google.Apis.Pagespeedonline.v1.Data
 open Utilities
@@ -11,9 +12,9 @@ module PageSpeed =
     /// <param name="apiKey">The developer API key.</param>
     /// <returns>The page speed service instance.</returns>
     let createPagespeedService apiKey =
-        let service = PagespeedonlineService ()
-        service.Key <- apiKey
-        service
+        let initializer = new BaseClientService.Initializer()
+        initializer.ApiKey <- apiKey
+        PagespeedonlineService(initializer)
 
     /// <summary>Runs a page speed test over the specified URI.</summary>
     /// <param name="service">The page speed service to use.</param>

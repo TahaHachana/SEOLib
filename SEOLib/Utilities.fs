@@ -1,9 +1,5 @@
 ﻿namespace SEOLib
 
-#if INTERACTIVE
-#r "System.Net.Http"
-#endif
-
 open System
 open System.Net
 open System.Net.Http
