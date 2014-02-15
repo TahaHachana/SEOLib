@@ -1,8 +1,6 @@
 ﻿#r @"..\SEOLib\bin\Release\SEOLib.dll"
 
-open System
 open SEOLib
-open SEOLib.Types
 
 //============
 // Html module
@@ -10,25 +8,26 @@ open SEOLib.Types
 
 let html =
     use client = new System.Net.WebClient()
-    client.DownloadString "http://www.websharper.com/home"
+    client.Encoding <- System.Text.Encoding.UTF8
+    client.DownloadString "https://github.com/"
 
-// title    
-let titleOption = Html.title html
+// title
+let title = Html.title html
 
-// meta tags
-let metaTags = Html.metaTags html
+// meta
+let meta = Html.meta html
 
 // meta description
-let metaDescOption = Html.metaDescription metaTags
+let metaDescription = Html.metaDescription html
 
 // meta keywords
-let metakeysOption = Html.metaKeywords metaTags
+let metakeywords = Html.metaKeywords html
 
 // headings
-let hs = Html.headings html
+let headings = Html.headings html
 
 // text/HTML ratio
-let ratio = Html.textHtmlRatio html
+let textHtmlRatio = Html.textHtmlRatio html
 
 //================
 // Keywords module

@@ -126,8 +126,8 @@ module Violations =
                                             [| makeTitleShortViolation titleLength index' |]
                                         | _ -> [||]
                                 let violations' =
-                                    let metas = Html.metaTags html
-                                    let metaDescOption = Html.metaDescription metas
+//                                    let metas = Html.meta html
+                                    let metaDescOption = Html.metaDescription html
                                     match metaDescOption with
                                         | None -> [||]
                                         | Some metaDesc ->
