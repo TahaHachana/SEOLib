@@ -9,7 +9,6 @@ open System.Text.RegularExpressions
 open System.Web
 open System.Xml.Linq
 open Google.Apis.Pagespeedonline.v1.Data
-open StopWords
 open Types
 
 module internal Utilities =
@@ -177,7 +176,7 @@ module internal Utilities =
     [<AutoOpenAttribute>]
     module Keywords =
 
-        let stopWords = Array.toList englishStopWords
+//        let stopWords = Array.toList englishStopWords
 
         let rec removeStopWords stopWords str =
             match stopWords with

@@ -33,18 +33,20 @@ let textHtmlRatio = Html.textHtmlRatio html
 // Keywords module
 //================
 
-let keywords = Keywords.analyzeKeywords html
+open SEOLib.Keywords
 
-let printKeywordData (keywords : Keyword []) count =
+let keywords = Keywords.analyze html
+
+let printKeywordsData (keywords : Keyword list) count =
     keywords
-    |> Array.filter (fun x -> x.WordsCount = count)
-    |> Array.iter (fun x -> printfn "%s, %d, %f" x.Combination x.Occurrence x.Density)
+    |> List.filter (fun x -> x.WordsCount = count)
+    |> List.iter (fun x -> printfn "%s, %d, %f" x.Combination x.Occurrence x.Density)
 
-let printKeywordData' = printKeywordData keywords
+let printKeywordsData' = printKeywordsData keywords
 
-let oneKeyword = printKeywordData' 1
-let twoKeywords = printKeywordData' 2
-let threeKeywords = printKeywordData' 3
+let oneKeyword = printKeywordsData' 1
+let twoKeywords = printKeywordsData' 2
+let threeKeywords = printKeywordsData' 3
 
 //================
 // Links module
