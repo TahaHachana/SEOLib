@@ -132,3 +132,108 @@ let textHtmlRatio html =
         |> fun x -> float x.Length
     textLength / (float html.Length) * 100.
     |> fun x -> Math.Round(x, 2)
+
+let private hrefRegex = Regex "(?i) href\\s*=\\s*(\"|')/?((?!#.*|/\B|mailto:|location\.|javascript:)[^\"'\#]+)(\"|'|\#)"
+
+let private baseUri html requestUri =
+    let baseMatch = Regex("(?is)<base.+?>").Match html
+    match baseMatch.Success with
+    | false -> requestUri
+    | true ->
+        let hrefMatch = hrefRegex.Match baseMatch.Value
+        match hrefMatch.Success with
+        | false -> requestUri
+        | true ->
+            let href = hrefMatch.Groups.[2].Value
+            match Uri.TryCreate(href, UriKind.Absolute) with
+            | false, _ -> requestUri
+            | true, x -> x
+
+let private anchor (linkMatch:Match) =
+    linkMatch.Groups.[2].Value
+    |> fun x -> Regex("(?is)(<script.*?</script>|<style.*?</style>)").Replace(x, "")
+    |> fun x -> Regex("<.+?>").Replace(x, "").Trim()
+    |> WebUtility.HtmlDecode
+
+let private relAttributes tag =
+    Regex("rel=(\"|')(.+?)(\"|')").Match(tag).Groups.[2].Value
+    |> (fun x -> x.Split([|' '|], StringSplitOptions.RemoveEmptyEntries))
+    |> List.ofArray
+//    |> List.map (fun x -> x.Trim())
+
+type Hyperlink =
+    {
+        UriString : string
+        Anchor : string
+        Type : LinkType
+        Rel : Rel
+    }
+
+    static member New uriString anchor linkType rel =
+        {
+            UriString = uriString
+            Anchor = anchor
+            Type = linkType
+            Rel = rel
+        }
+
+and LinkType = External | Internal
+
+and Rel = Follow | NoFollow
+
+let private hrefs html =
+    Regex("(?is)(<a .+?>)(.+?)</a>").Matches html
+    |> Seq.cast<Match>
+    |> Seq.toList
+    |> List.map (fun linkMatch ->
+        let openTag = linkMatch.Groups.[1].Value
+        let href = hrefRegex.Match(openTag).Groups.[2].Value
+        let linkAnchor = anchor linkMatch
+        let follow =
+            relAttributes openTag
+            |> List.tryFind (fun x -> Regex("(?i)nofollow").IsMatch x)
+            |> function None -> Follow | Some _ -> NoFollow
+        href, linkAnchor, follow)
+
+let private makeAbsolute relativeLinks baseUri =
+    [
+        for (href:string, anchor, follow) in relativeLinks do
+            let isUri, result = Uri.TryCreate(baseUri, href)
+            match isUri with
+            | false -> ()
+            | true -> yield result, anchor, follow
+    ]
+
+let private makeHyperlinks (uri:Uri) links =
+    let host = uri.Host
+    List.map
+        (fun (uri:Uri, anchor, follow) ->
+            let isInternal = uri.Host = host
+            match isInternal with
+            | false -> Hyperlink.New (uri.ToString()) anchor External follow
+            | true -> Hyperlink.New (uri.ToString()) anchor Internal follow)
+        links
+
+/// <summary>Returns the hyperlinks contained within a HTML document.</summary>
+/// <param name="html">The HTML document.</param>
+let hyperlinks html requestUri =
+    let html' = Regex("(?s)<!--.*?--\s*>").Replace(html, "*")
+    let baseUri = baseUri html' requestUri
+    let absolute, relative =
+        hrefs html'
+        |> List.partition (fun (href, _, _) ->
+            Regex("(?i)^https?://[^\"]*").IsMatch href)
+    let absolute' =
+        absolute
+        |> List.map (fun (href, anchor, rel) ->
+            let isUri, result = Uri.TryCreate(href, UriKind.Absolute)
+            isUri, result, anchor, rel)
+        |> List.filter (fun (isUri, _, _, _) -> isUri )
+        |> List.map (fun (isUri, result, anchor, follow) ->
+            result, anchor, follow)
+    let relative' = makeAbsolute relative baseUri
+    absolute'
+    |> List.append relative'
+    |> Seq.distinctBy (fun (x, _, _) -> x)
+    |> Seq.toList
+    |> makeHyperlinks requestUri

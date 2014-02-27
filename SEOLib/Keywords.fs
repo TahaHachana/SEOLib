@@ -17,7 +17,7 @@ let private stopwords =
     use reader = new StreamReader(stream)
     [while not reader.EndOfStream do yield reader.ReadLine()]
 
-let rec stripStopwords stopwords input =
+let rec private stripStopwords stopwords input =
     match stopwords with
     | head :: tail ->
         let regex = Regex("\\b" + head + "\\b") 

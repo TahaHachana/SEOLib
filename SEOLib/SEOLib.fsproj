@@ -50,10 +50,9 @@
     <Compile Include="AssemblyInfo.fs" />
     <Compile Include="Html.fs" />
     <Compile Include="Http.fs" />
+    <Compile Include="Keywords.fs" />
     <Compile Include="Types.fs" />
     <Compile Include="Utilities.fs" />
-    <Compile Include="Keywords.fs" />
-    <Compile Include="Links.fs" />
     <Compile Include="Violations.fs" />
     <Compile Include="Validator.fs" />
     <Compile Include="PageSpeed.fs" />

@@ -1,15 +1,20 @@
 ﻿#r @"..\SEOLib\bin\Release\SEOLib.dll"
 
 open SEOLib
+open System
+open System.Net
+open System.Text
 
 //============
 // Html module
 //============
 
+let requestUri = Uri "https://github.com/"
+
 let html =
-    use client = new System.Net.WebClient()
-    client.Encoding <- System.Text.Encoding.UTF8
-    client.DownloadString "https://github.com/"
+    use client = new WebClient()
+    client.Encoding <- Encoding.UTF8
+    client.DownloadString requestUri
 
 // title
 let title = Html.title html
@@ -29,6 +34,9 @@ let headings = Html.headings html
 // text/HTML ratio
 let textHtmlRatio = Html.textHtmlRatio html
 
+// links
+let links = Html.hyperlinks html requestUri
+
 //================
 // Keywords module
 //================
@@ -47,22 +55,6 @@ let printKeywordsData' = printKeywordsData keywords
 let oneKeyword = printKeywordsData' 1
 let twoKeywords = printKeywordsData' 2
 let threeKeywords = printKeywordsData' 3
-
-//================
-// Links module
-//================
-
-let links = Links.collectLinks html (System.Uri "http://www.websharper.com/home")
-
-let internalLinks =
-    links
-    |> List.filter (fun x -> x.Type = Internal)
-    |> List.iter (fun x -> printfn "%s" x.URL)
-
-let externalLinks =
-    links
-    |> List.filter (fun x -> x.Type = External)
-    |> List.iter (fun x -> printfn "%s" x.URL)
 
 //==================
 // Violations module
