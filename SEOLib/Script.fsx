@@ -5,16 +5,16 @@ open System
 open System.Net
 open System.Text
 
-//============
-// Html module
-//============
-
 let requestUri = Uri "https://github.com/"
 
 let html =
     use client = new WebClient()
     client.Encoding <- Encoding.UTF8
     client.DownloadString requestUri
+
+//============
+// Html module
+//============
 
 // title
 let title = Html.title html
@@ -60,12 +60,7 @@ let threeKeywords = printKeywordsData' 3
 // Violations module
 //==================
 
-let uri = Uri "http://www.websharper.com/home"
-
-let violations =
-    Violations.auditHtml html uri
-    |> Async.RunSynchronously
-    |> Array.concat
+let violations = Violations.review html requestUri
 
 //=================
 // Validator module

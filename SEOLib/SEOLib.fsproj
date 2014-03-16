@@ -48,12 +48,13 @@
   </Target>
   <ItemGroup>
     <Compile Include="AssemblyInfo.fs" />
+    <Compile Include="Regex.fs" />
     <Compile Include="Html.fs" />
     <Compile Include="Http.fs" />
     <Compile Include="Keywords.fs" />
+    <Compile Include="Violations.fs" />
     <Compile Include="Types.fs" />
     <Compile Include="Utilities.fs" />
-    <Compile Include="Violations.fs" />
     <Compile Include="Validator.fs" />
     <Compile Include="PageSpeed.fs" />
     <None Include="Script.fsx" />

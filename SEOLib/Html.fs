@@ -12,7 +12,7 @@ let private groupOption (regexMatch:Match) (group:int) =
 /// <summary>Returns the title of a HTML document.</summary>
 /// <param name="html">The HTML document.</param>
 let title html =
-    let titleMatch = Regex("(?is)<title>(.+?)</title>").Match html
+    let titleMatch = Regex.title.Match html
     match titleMatch.Success with
     | false -> None
     | true -> groupOption titleMatch 1
@@ -33,22 +33,24 @@ type Meta =
 
 type MetaAttr = HttpEquiv of string | Name of string 
 
-let private httpEquivRegex = Regex("(?i)http-equiv=(\"|')([^\"']+)(\"|')", RegexOptions.Compiled)    
-let private nameRegex = Regex("(?i)name=(\"|')([^\"']+)(\"|')", RegexOptions.Compiled)
-let private contentRegex = Regex("(?i)content=(\"|')([^\"']+)(\"|')", RegexOptions.Compiled)
-    
 let private metaAttr input =
-    let httpEquivMatch = httpEquivRegex.Match input
+    let httpEquivMatch = Regex.httpEquivAttr.Match input
     match httpEquivMatch.Success with
     | false ->
-        let nameMatch = nameRegex.Match input
+        let nameMatch = Regex.nameAttr.Match input
         match nameMatch.Success with
         | false -> None
-        | true -> nameMatch.Groups.[2].Value.Trim() |> Name |> Some
-    | true -> httpEquivMatch.Groups.[2].Value.Trim() |> HttpEquiv |> Some
+        | true ->
+            nameMatch.Groups.[2].Value.Trim()
+            |> Name
+            |> Some
+    | true ->
+        httpEquivMatch.Groups.[2].Value.Trim()
+        |> HttpEquiv
+        |> Some
 
 let private metaContent input =
-    let contentMatch = contentRegex.Match input
+    let contentMatch = Regex.contentAttr.Match input
     match contentMatch.Success with
     | false -> None
     | true -> groupOption contentMatch 2
@@ -64,7 +66,7 @@ let private httpEquivName metaAttrOption =
 /// <summary>Returns the meta elements of a HTML document.</summary>
 /// <param name="html">The HTML document.</param>
 let meta html =
-    Regex("(?i)<meta .+?>").Matches html
+    Regex.meta.Matches html
     |> Seq.cast<Match>
     |> Seq.toList
     |> List.map (fun x ->
@@ -73,12 +75,10 @@ let meta html =
         Meta.New httpEquiv name <| metaContent metaValue)
 
 let private metaElt html pattern =
-    Regex("(?i)<meta .+?>").Matches html
+    Regex.meta.Matches html
     |> Seq.cast<Match>
     |> Seq.tryFind (fun x -> Regex(pattern).IsMatch x.Value)
-    |> function
-    | None -> None
-    | Some x -> metaContent x.Value
+    |> function None -> None | Some x -> metaContent x.Value
 
 /// <summary>Returns the meta description of a HTML document.</summary>
 /// <param name="html">The HTML document.</param>
@@ -89,8 +89,8 @@ let metaDescription html = metaElt html "(?i)name=(\"|')description(\"|')"
 let metaKeywords html = metaElt html "(?i)name=(\"|')keywords(\"|')"
 
 let private stripHtml html =
-    Regex("(?is)(<!--.*?--\s*>|<script.*?</script>|<style.*?</style>)").Replace(html, "")
-    |> fun x -> Regex("<.+?>").Replace(x, "").Trim()
+    Regex.commentScriptCss.Replace(html, "")
+    |> fun x -> Regex.tag.Replace(x, "").Trim()
 
 type Heading =
     {
@@ -107,7 +107,7 @@ type Heading =
 /// <summary>Returns the headings of a HTML document.</summary>
 /// <param name="html">The HTML document.</param>
 let headings html =
-    Regex("(?is)<h([1-6])>(.+?)</h[1-6]>").Matches html
+    Regex.heading.Matches html
     |> Seq.cast<Match>
     |> Seq.toList
     |> List.map (fun x ->
@@ -119,8 +119,8 @@ let headings html =
         Heading.New level text)
 
 let private stripSpaces html =
-    Regex("(\n|\r)").Replace(html, " ")
-    |> fun x -> Regex(" {2,}").Replace(x, " ")
+    Regex.newline.Replace(html, " ")
+    |> fun x -> Regex.space.Replace(x, " ")
 
 /// <summary>Calculates the text/HTML ratio in a HTML document.</summary>
 /// <param name="html">The HTML document.</param>
@@ -133,14 +133,12 @@ let textHtmlRatio html =
     textLength / (float html.Length) * 100.
     |> fun x -> Math.Round(x, 2)
 
-let private hrefRegex = Regex "(?i) href\\s*=\\s*(\"|')/?((?!#.*|/\B|mailto:|location\.|javascript:)[^\"'\#]+)(\"|'|\#)"
-
 let private baseUri html requestUri =
-    let baseMatch = Regex("(?is)<base.+?>").Match html
+    let baseMatch = Regex.``base``.Match html
     match baseMatch.Success with
     | false -> requestUri
     | true ->
-        let hrefMatch = hrefRegex.Match baseMatch.Value
+        let hrefMatch = Regex.href.Match baseMatch.Value
         match hrefMatch.Success with
         | false -> requestUri
         | true ->
@@ -151,15 +149,14 @@ let private baseUri html requestUri =
 
 let private anchor (linkMatch:Match) =
     linkMatch.Groups.[2].Value
-    |> fun x -> Regex("(?is)(<script.*?</script>|<style.*?</style>)").Replace(x, "")
-    |> fun x -> Regex("<.+?>").Replace(x, "").Trim()
+    |> fun x -> Regex.scriptCss.Replace(x, "")
+    |> fun x -> Regex.tag.Replace(x, "").Trim()
     |> WebUtility.HtmlDecode
 
 let private relAttributes tag =
-    Regex("rel=(\"|')(.+?)(\"|')").Match(tag).Groups.[2].Value
+    Regex.relAttr.Match(tag).Groups.[2].Value
     |> (fun x -> x.Split([|' '|], StringSplitOptions.RemoveEmptyEntries))
     |> List.ofArray
-//    |> List.map (fun x -> x.Trim())
 
 type Hyperlink =
     {
@@ -182,17 +179,17 @@ and LinkType = External | Internal
 and Rel = Follow | NoFollow
 
 let private hrefs html =
-    Regex("(?is)(<a .+?>)(.+?)</a>").Matches html
+    Regex.hyperlink.Matches html
     |> Seq.cast<Match>
     |> Seq.toList
     |> List.map (fun linkMatch ->
         let openTag = linkMatch.Groups.[1].Value
-        let href = hrefRegex.Match(openTag).Groups.[2].Value
+        let href = Regex.href.Match(openTag).Groups.[2].Value
         let linkAnchor = anchor linkMatch
         let follow =
             relAttributes openTag
             |> List.tryFind (fun x -> Regex("(?i)nofollow").IsMatch x)
-            |> function None -> Follow | Some _ -> NoFollow
+            |> function None -> Follow | _ -> NoFollow
         href, linkAnchor, follow)
 
 let private makeAbsolute relativeLinks baseUri =
@@ -206,29 +203,28 @@ let private makeAbsolute relativeLinks baseUri =
 
 let private makeHyperlinks (uri:Uri) links =
     let host = uri.Host
-    List.map
+    links |> List.map
         (fun (uri:Uri, anchor, follow) ->
             let isInternal = uri.Host = host
+            let uriString = uri.ToString()
             match isInternal with
-            | false -> Hyperlink.New (uri.ToString()) anchor External follow
-            | true -> Hyperlink.New (uri.ToString()) anchor Internal follow)
-        links
+            | false -> Hyperlink.New uriString anchor External follow
+            | true -> Hyperlink.New uriString anchor Internal follow)
 
 /// <summary>Returns the hyperlinks contained within a HTML document.</summary>
 /// <param name="html">The HTML document.</param>
 let hyperlinks html requestUri =
-    let html' = Regex("(?s)<!--.*?--\s*>").Replace(html, "*")
+    let html' = Regex.comment.Replace(html, "*")
     let baseUri = baseUri html' requestUri
     let absolute, relative =
-        hrefs html'
-        |> List.partition (fun (href, _, _) ->
-            Regex("(?i)^https?://[^\"]*").IsMatch href)
+        hrefs html' |> List.partition (fun (href, _, _) ->
+            Regex.uri.IsMatch href)
     let absolute' =
         absolute
         |> List.map (fun (href, anchor, rel) ->
             let isUri, result = Uri.TryCreate(href, UriKind.Absolute)
             isUri, result, anchor, rel)
-        |> List.filter (fun (isUri, _, _, _) -> isUri )
+        |> List.filter (fun (isUri, _, _, _) -> isUri)
         |> List.map (fun (isUri, result, anchor, follow) ->
             result, anchor, follow)
     let relative' = makeAbsolute relative baseUri
