@@ -4,7 +4,7 @@ SEOLib
 About
 -----
 
-SEOLib is an SEO (Search Engine Optimization) library developed in F#. The aim is to provide the necessary functionality to write simple SEO tools and utilities.
+SEOLib is an SEO (Search Engine Optimization) library developed in F# that aims to provide the necessary functionality to write simple SEO tools and utilities.
 
 Demo App
 --------
@@ -15,8 +15,6 @@ NuGet
 -----
 
 	PM> Install-Package SEOLib
-
-The PageSpeed module depends on the [Google APIs client library for .NET](http://code.google.com/p/google-api-dotnet-client/).
 
 Usage
 -----

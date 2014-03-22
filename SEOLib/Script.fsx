@@ -1,4 +1,7 @@
-﻿#r @"..\SEOLib\bin\Release\SEOLib.dll"
+﻿#r @"..\packages\Google.Apis.Pagespeedonline.v1.1.8.1.380\lib\portable-net4+sl4+wp71+win8\Google.Apis.Pagespeedonline.v1.dll"
+#r @"..\packages\Newtonsoft.Json.6.0.1\lib\net40\Newtonsoft.Json.dll"
+#r @"..\packages\Microsoft.Net.Http.2.2.18\lib\net40\System.Net.Http.Primitives.dll"
+#r @"..\SEOLib\bin\Release\SEOLib.dll"
 
 open SEOLib
 open System
@@ -75,13 +78,10 @@ let validationResult = Validator.validateUri "http://www.websharper.com/home"
 //=================
 // PageSpeed module
 //=================
-#r @"..\SEOLib\bin\Release\Google.Apis.Pagespeedonline.v1.dll"
 
-let service = PageSpeed.createPagespeedService ""
-let pagespeedResult = PageSpeed.runPagespeed service "http://fsharp.org" |> Async.RunSynchronously
-let etag = PageSpeed.resultEtag pagespeedResult
-let requestUri = PageSpeed.getRequestUri pagespeedResult
-let stats = PageSpeed.pagespeedStats pagespeedResult
-let statusCode = PageSpeed.getResponseCode pagespeedResult
-let score = PageSpeed.getScore pagespeedResult
-let rules = PageSpeed.pagespeedRules pagespeedResult
+let speedService = PageSpeed.SpeedService "API Key"
+
+let speedReview =
+    speedService.Review "http://fssnip.net"
+    |> Async.RunSynchronously
+

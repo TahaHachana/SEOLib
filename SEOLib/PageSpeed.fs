@@ -1,74 +1,155 @@
-﻿namespace SEOLib
+﻿module SEOLib.PageSpeed
 
-open System
+#if INTERACTIVE
+#r @"..\packages\Microsoft.Bcl.Async.1.0.16\lib\net40\Microsoft.Threading.Tasks.dll"
+#r @"..\packages\Microsoft.Net.Http.2.2.18\lib\net40\System.Net.Http.Primitives.dll"
+#r @"..\packages\Newtonsoft.Json.6.0.1\lib\net40\Newtonsoft.Json.dll"
+#r @"..\packages\Google.Apis.1.8.1\lib\net40\Google.Apis.dll"
+#r @"..\packages\Google.Apis.Core.1.8.1\lib\portable-net4+sl4+wp71+win8\Google.Apis.Core.dll"
+#r @"..\packages\Google.Apis.Pagespeedonline.v1.1.8.1.380\lib\portable-net4+sl4+wp71+win8\Google.Apis.Pagespeedonline.v1.dll"
+#endif
+
 open Google.Apis.Services
 open Google.Apis.Pagespeedonline.v1
-open Google.Apis.Pagespeedonline.v1.Data
-open Utilities
+open System
+open System.Text.RegularExpressions
 
-module PageSpeed =
-    
-    /// <summary>Initializes a page speed service and sets its API key property.</summary>
-    /// <param name="apiKey">The developer API key.</param>
-    /// <returns>The page speed service instance.</returns>
-    let createPagespeedService apiKey =
-        let initializer = new BaseClientService.Initializer()
-        initializer.ApiKey <- apiKey
-        PagespeedonlineService(initializer)
+type PageSpeedRule =
+    {
+        Name : string
+        Impact : float
+        Details : RuleDetails list
+    }
 
-    /// <summary>Runs a page speed test over the specified URI.</summary>
-    /// <param name="service">The page speed service to use.</param>
-    /// <param name="uriString">The URI that must be tested.</param>
-    /// <returns>An asynchronous computation that would run a page speed test over the specified URI.</returns>    
-    let runPagespeed (service : PagespeedonlineService) uriString =
-        let pagespeedRequest = service.Pagespeedapi.Runpagespeed uriString
-        pagespeedRequest.Strategy <- Nullable PagespeedapiResource.Strategy.Desktop
-        Async.FromBeginEnd(pagespeedRequest.BeginFetch, pagespeedRequest.EndFetch)
+    static member New name impact details =
+        {
+            Name = name
+            Impact = impact
+            Details = details
+        }
 
-    /// <summary>Returns the ETag of a page speed result.</summary>
-    /// <param name="result">The page speed result.</param>
-    /// <returns>The ETag of the result.</returns>    
-    let resultEtag (result : Result) = result.ETag
+and RuleDetails =
+    {
+        Header : string
+        Urls : string list
+    }
 
-    /// <summary>Returns the URI that actually responded to the page speed request.</summary>
-    /// <param name="result">The page speed result.</param>
-    /// <returns>The final URI that responded to the request.</returns>    
-    let getRequestUri (result : Result) = result.Id
+    static member New header urls =
+        {
+            Header = header
+            Urls = urls
+        }
 
-    /// <summary>Returns statistics about a page speed result.</summary>
-    /// <param name="result">The page speed result.</param>
-    /// <returns>The result statistics.</returns> 
-    let pagespeedStats (result : Result) =
-        let pageStats = getPageStats result
-        let cssResponseBytes = getCssBytes pageStats
-        let flashResponseBytes = getFlashBytes pageStats
-        let htmlResponseBytes = getHtmlBytes pageStats
-        let imageResponseBytes = getImageBytes pageStats
-        let javascriptResponseBytes = getJavascriptBytes pageStats
-        let numberCssResources = getNumberCssResource pageStats
-        let numberHosts = getNumberHosts pageStats
-        let numberJsResources = getNumberJsResources pageStats
-        let numberResources = getNumberResources pageStats
-        let numberStaticResourecs = getNumberStaticResourecs pageStats
-        let numberTextBytes = getNumberTextBytes pageStats
-        let otherBytes = getOtherBytes pageStats
-        let totalBytes = getTotalRequestBytes pageStats
-        makePagespeedStats cssResponseBytes flashResponseBytes htmlResponseBytes imageResponseBytes javascriptResponseBytes numberCssResources numberHosts numberJsResources numberResources numberStaticResourecs numberTextBytes otherBytes totalBytes
+[<AutoOpen>]
+module private Utils =
 
-    /// <summary>Returns the HTTP status code of the tested URI.</summary>
-    /// <param name="result">The page speed result.</param>
-    /// <returns>The HTTP status code.</returns> 
-    let getResponseCode (result : Result) = testNullable result.ResponseCode
+    let placeholderRegex = Regex("\$\d+", RegexOptions.Compiled)
 
-    /// <summary>Returns the score of a page speed result.</summary>
-    /// <param name="result">The page speed result.</param>
-    /// <returns>The score value.</returns> 
-    let getScore (result : Result) = testNullable result.Score
+    let rec updateString input (lst:string list) index =
+        match lst with
+        | head :: tail ->
+            let input' = placeholderRegex.Replace(input, head, 1)
+            updateString input' tail (index + 1)
+        | [] -> input
 
-    /// <summary>Returns the rules associated with the specified page speed result.</summary>
-    /// <param name="result">The page speed result.</param>
-    /// <returns>The page speed rules list.</returns> 
-    let pagespeedRules (result : Result) =
-        result.FormattedResults.RuleResults.Values
+    type UrlBlock = Data.Result.FormattedResultsData.RuleResultsDataElement.UrlBlocksData
+
+    type UrlData = UrlBlock.UrlsData
+
+    type ArgData = UrlData.ResultData.ArgsData
+
+    let argsList (args:ArgData seq) =
+        args
         |> Seq.toList
-        |> List.map makePageSpeedRule
+        |> List.map (fun x -> x.Value)
+
+    let formatUrlData (urlData:UrlData) =   
+        let result = urlData.Result
+        let args = result.Args
+        let format = result.Format
+        match args with
+        | null -> format
+        | _ -> updateString format (argsList args) 0
+
+    type UrlBlockArg = UrlBlock.HeaderData.ArgsData
+
+    let urlBlockHeader (args:UrlBlockArg seq) format =
+        let args' =
+            args 
+            |> Seq.toList
+            |> List.map (fun x -> x.Value)
+        updateString format args' 0
+
+    let urlBlockUrls (urlBlock:UrlBlock) =
+        match urlBlock.Urls with
+        | null -> []
+        | urls ->
+            urls
+            |> Seq.toList
+            |> List.map formatUrlData
+
+    let formatUrlBlock (urlBlock:UrlBlock) =
+        let header = urlBlock.Header
+        let args = header.Args
+        let format = header.Format
+        let header =
+            match args with
+            | null -> format
+            | _ -> urlBlockHeader args format
+        RuleDetails.New header <| urlBlockUrls urlBlock
+
+    let pageSpeedRules (result:Data.Result) =
+        result.FormattedResults.RuleResults.Values
+        |> Seq.map (fun rule ->
+            let name = rule.LocalizedRuleName
+            let impact = rule.RuleImpact.Value
+            let details =
+                rule.UrlBlocks
+                |> Seq.map formatUrlBlock
+                |> Seq.toList
+            PageSpeedRule.New name impact details)
+        |> Seq.toList
+
+type PageStats = Data.Result.PageStatsData
+
+type PageSpeedReview =
+    {
+        Uri : string
+        Score : int
+        Screenshot : string
+        Rules : PageSpeedRule list
+        Stats : PageStats
+    }
+
+    static member New uri score screenshot rules stats =
+        {
+            Uri = uri
+            Score = score
+            Screenshot = screenshot
+            Rules = rules
+            Stats = stats
+        }
+
+type SpeedService(apiKey) =
+
+    let initializer = new BaseClientService.Initializer(ApiKey=apiKey)
+    let service = new PagespeedonlineService(initializer)
+
+    member __.Review uriString =
+        async {
+            try
+                let pagespeedRequest = service.Pagespeedapi.Runpagespeed uriString
+                pagespeedRequest.Strategy <- Nullable PagespeedapiResource.RunpagespeedRequest.StrategyEnum.Desktop
+                pagespeedRequest.Screenshot <- Nullable true
+                let! result = pagespeedRequest.ExecuteAsync() |> Async.AwaitTask
+                let score = int result.Score
+                let screenshot =
+                    result.Screenshot.Data
+                    |> fun x -> Regex("_").Replace(x, "/")
+                    |> fun x -> Regex("-").Replace(x, "+")
+                    |> fun x -> "data:image/jpeg;base64," + x
+                let rules = pageSpeedRules result
+                let review = PageSpeedReview.New result.Id score screenshot rules result.PageStats
+                return Some review
+            with _ -> return None
+        }

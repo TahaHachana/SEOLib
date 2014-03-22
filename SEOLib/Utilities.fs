@@ -772,19 +772,19 @@ module internal Utilities =
                 | false -> None
                 | true  -> Some nullable.Value
 
-        let getCssBytes (stats : Result.PageStatsData) = testNull stats.CssResponseBytes
-        let getFlashBytes (stats : Result.PageStatsData) = testNull stats.FlashResponseBytes
-        let getHtmlBytes (stats : Result.PageStatsData) = testNull stats.HtmlResponseBytes
-        let getImageBytes (stats : Result.PageStatsData) = testNull stats.ImageResponseBytes
-        let getJavascriptBytes (stats : Result.PageStatsData) = testNull stats.JavascriptResponseBytes
-        let getNumberCssResource (stats : Result.PageStatsData) = testNullable stats.NumberCssResources
-        let getNumberHosts (stats : Result.PageStatsData) = testNullable stats.NumberHosts
-        let getNumberJsResources (stats : Result.PageStatsData) = testNullable stats.NumberJsResources
-        let getNumberResources (stats : Result.PageStatsData) = testNullable stats.NumberResources
-        let getNumberStaticResourecs (stats : Result.PageStatsData) = testNullable stats.NumberStaticResources
-        let getNumberTextBytes (stats : Result.PageStatsData) = testNull stats.TextResponseBytes
-        let getOtherBytes(stats : Result.PageStatsData) = testNull stats.OtherResponseBytes
-        let getTotalRequestBytes (stats : Result.PageStatsData) = testNull stats.TotalRequestBytes
+//        let getCssBytes (stats : Result.PageStatsData) = testNull stats.CssResponseBytes
+//        let getFlashBytes (stats : Result.PageStatsData) = testNull stats.FlashResponseBytes
+//        let getHtmlBytes (stats : Result.PageStatsData) = testNull stats.HtmlResponseBytes
+//        let getImageBytes (stats : Result.PageStatsData) = testNull stats.ImageResponseBytes
+//        let getJavascriptBytes (stats : Result.PageStatsData) = testNull stats.JavascriptResponseBytes
+//        let getNumberCssResource (stats : Result.PageStatsData) = testNullable stats.NumberCssResources
+//        let getNumberHosts (stats : Result.PageStatsData) = testNullable stats.NumberHosts
+//        let getNumberJsResources (stats : Result.PageStatsData) = testNullable stats.NumberJsResources
+//        let getNumberResources (stats : Result.PageStatsData) = testNullable stats.NumberResources
+//        let getNumberStaticResourecs (stats : Result.PageStatsData) = testNullable stats.NumberStaticResources
+//        let getNumberTextBytes (stats : Result.PageStatsData) = testNull stats.TextResponseBytes
+//        let getOtherBytes(stats : Result.PageStatsData) = testNull stats.OtherResponseBytes
+//        let getTotalRequestBytes (stats : Result.PageStatsData) = testNull stats.TotalRequestBytes
 
         let makePagespeedStats cssBytes flashBytes htmlBytes imageBytes javascriptBytes numberCssResources numberHosts numberJsResources numberResources numberStaticResources numberTextBytes otherBytes totalBytes =
             {
@@ -823,52 +823,52 @@ module internal Utilities =
 
         let nullToOption = function null -> None | x -> Some x
 
-        let formatUrlData (urlData : Result.FormattedResultsData.RuleResultsData.RuleResultsDataSchema.UrlBlocksData.UrlsData.ResultData) =
-            let format = urlData.Format      
-            let argsOption = nullToOption urlData.Args
-            match argsOption with
-                | None -> format
-                | Some args ->
-                    let args' = args |> Seq.map (fun x -> x.Value) |> Seq.toList
-                    updateString format args' 0
-
-        let getUrlData (urls : seq<Result.FormattedResultsData.RuleResultsData.RuleResultsDataSchema.UrlBlocksData.UrlsData>) =
-            match urls with
-                | null -> []
-                | urls ->
-                    urls
-                    |> Seq.toList
-                    |> List.map (fun x -> x.Result)
-            |> List.map formatUrlData
-
-        let formatUrlBlocksData (urlBlocksData : Result.FormattedResultsData.RuleResultsData.RuleResultsDataSchema.UrlBlocksData) =
-            let header = urlBlocksData.Header
-            let argsOption = nullToOption header.Args
-            let format = header.Format
-            let format' =
-                match argsOption with
-                    | None -> format
-                    | Some args ->
-                        let args' = args |> Seq.map (fun x -> x.Value) |> Seq.toList
-                        updateString format args' 0
-            let urlData = getUrlData urlBlocksData.Urls
-            makeSuggestion format' urlData
-
-        let makePageSpeedRule (ruleResult : Result.FormattedResultsData.RuleResultsData.RuleResultsDataSchema) =
-            let name = ruleResult.LocalizedRuleName
-            let impact = testNullable ruleResult.RuleImpact
-            let score = testNullable ruleResult.RuleScore
-            let suggestions =
-                testNull' ruleResult.UrlBlocks
-                |> function
-                    | None -> None
-                    | Some lst ->
-                        lst
-                        |> List.map formatUrlBlocksData
-                        |> Some
-            {
-                Name        = name
-                Impact      = impact
-                Score       = score
-                Suggestions = suggestions
-            }
+//        let formatUrlData (urlData : Result.FormattedResultsData.RuleResultsData.RuleResultsDataSchema.UrlBlocksData.UrlsData.ResultData) =
+//            let format = urlData.Format      
+//            let argsOption = nullToOption urlData.Args
+//            match argsOption with
+//                | None -> format
+//                | Some args ->
+//                    let args' = args |> Seq.map (fun x -> x.Value) |> Seq.toList
+//                    updateString format args' 0
+//
+//        let getUrlData (urls : seq<Result.FormattedResultsData.RuleResultsData.RuleResultsDataSchema.UrlBlocksData.UrlsData>) =
+//            match urls with
+//                | null -> []
+//                | urls ->
+//                    urls
+//                    |> Seq.toList
+//                    |> List.map (fun x -> x.Result)
+//            |> List.map formatUrlData
+//
+//        let formatUrlBlocksData (urlBlocksData : Result.FormattedResultsData.RuleResultsData.RuleResultsDataSchema.UrlBlocksData) =
+//            let header = urlBlocksData.Header
+//            let argsOption = nullToOption header.Args
+//            let format = header.Format
+//            let format' =
+//                match argsOption with
+//                    | None -> format
+//                    | Some args ->
+//                        let args' = args |> Seq.map (fun x -> x.Value) |> Seq.toList
+//                        updateString format args' 0
+//            let urlData = getUrlData urlBlocksData.Urls
+//            makeSuggestion format' urlData
+//
+//        let makePageSpeedRule (ruleResult : Result.FormattedResultsData.RuleResultsData.RuleResultsDataSchema) =
+//            let name = ruleResult.LocalizedRuleName
+//            let impact = testNullable ruleResult.RuleImpact
+//            let score = testNullable ruleResult.RuleScore
+//            let suggestions =
+//                testNull' ruleResult.UrlBlocks
+//                |> function
+//                    | None -> None
+//                    | Some lst ->
+//                        lst
+//                        |> List.map formatUrlBlocksData
+//                        |> Some
+//            {
+//                Name        = name
+//                Impact      = impact
+//                Score       = score
+//                Suggestions = suggestions
+//            }

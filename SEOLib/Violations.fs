@@ -34,7 +34,7 @@ type ViolationCode =
     | TitleShort
     | TooManyLinks
 
-type ViolationPrivate =
+type private ViolationPrivate =
     {
         Category : ViolationCategory
         Code : ViolationCode
@@ -428,35 +428,6 @@ module private Utilities =
             Level = violationPrivate.Level
             Recommendation = violationPrivate.Recommendation
         }
-
-//let html = ""
-//let uri = Uri "http://github.com"
-//
-//let lines = html.Split '\n'
-//
-//let vs =
-//    [
-//        yield! altViolations html
-//        yield metaDescriptionViolation html
-//        yield h1Violation html
-//        yield! cssViolations html
-//        yield! scriptViolations html
-//        yield queryViolation uri
-//        yield! titleViolations html
-//        yield hyperlinksViolation html
-//        yield metaRefreshViolation html
-//    ]
-//    |> List.choose id
-//
-//let rec indexPosition (lines:string []) lineIndex length index =
-//    let length' = lines.[lineIndex].Length + 1
-//    let length'' = length + length'
-//    match length'' > index with
-//    | false -> indexPosition lines (lineIndex + 1) length'' index
-//    | true -> lineIndex + 1, length' - (length'' - index) + 1
-//
-//let test = indexPosition lines 0 0 vs.[0].Index.Value
-
 
 let review (html:string) uri =
     let lines = html.Split '\n'
