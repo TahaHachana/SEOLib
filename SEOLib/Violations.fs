@@ -1,7 +1,6 @@
 ﻿module SEOLib.Violations
 
 open System
-open System.Net
 open System.Text.RegularExpressions
 
 type ViolationLevel = Error | Warning
@@ -69,7 +68,7 @@ and Position =
         }
 
 [<AutoOpen>]
-module private Utilities =
+module private Utils =
 
     let altMissing idx =
         {
@@ -79,7 +78,7 @@ module private Utilities =
             Heading = "The \"alt\" attribute of the <img> tag is missing."
             Index = Some idx
             Level = Warning
-            Recommendation = "Add a \"alt\" attribute that describes the image."
+            Recommendation = "Add an \"alt\" attribute that describes the image."
         }
 
     let altEmpty idx =
@@ -93,11 +92,9 @@ module private Utilities =
             Recommendation = "Add content to the \"alt\" attribute."
         }
 
-    let altRegex = Regex "(?i)alt=(\"|')(.+?)(\"|')"
-
     let checkAlt (imgMatch:Match) =
         let value, idx = imgMatch.Value, imgMatch.Index
-        let altMatch = altRegex.Match value
+        let altMatch = Regex.altAttr.Match value
         match altMatch.Success with
         | false -> Some <| altMissing idx
         | true ->
@@ -149,7 +146,7 @@ module private Utilities =
         match contentMatch.Success with
         | false -> Some <| descriptionEmpty idx
         | true ->
-            match contentMatch.Value.Length with
+            match contentMatch.Groups.[2].Value.Length with
             | x when x = 0 -> Some <| descriptionEmpty idx
             | x when x > 150 -> Some <| descriptionLong x idx
             | x when x < 25 -> Some <| descriptionShort x idx
@@ -159,7 +156,7 @@ module private Utilities =
         {
             Category = SEO
             Code = DescriptionMissing
-            Description = "The page markup does not contain the meta description tag."
+            Description = "The page's markup does not contain the meta description tag."
             Heading = "The meta description is missing."
             Index = None
             Level = Warning
@@ -170,7 +167,7 @@ module private Utilities =
         {
             Category = Standards
             Code = DescriptionMultiple
-            Description = sprintf "The page markup contains %d meta description tags." count
+            Description = sprintf "The page's markup contains %d meta description tags." count
             Heading = "The page contains multiple meta description tags."
             Index = None
             Level = Warning
@@ -249,15 +246,15 @@ module private Utilities =
             Recommendation = "Move large blocks of CSS code to externally linked CSS files."
         }
 
-    let inlineViolations pattern html violation =
-        Regex(pattern).Matches html
+    let inlineViolations (regex:Regex) html violation =
+        regex.Matches html
         |> Seq.cast<Match>
         |> Seq.toList
         |> List.map (fun x -> x.Groups.[1].Value.Length, x.Index)
         |> List.filter (fun (length, _) -> length > 1024)
         |> List.map (fun (length, idx) -> Some <| violation length idx)
 
-    let cssViolations html = inlineViolations "(?is)<style.*?>(.+?)</style>" html largeInlineCss
+    let cssViolations html = inlineViolations Regex.style html largeInlineCss
 
     let largeInlineScript length idx =
         {
@@ -270,7 +267,7 @@ module private Utilities =
             Recommendation = "Move all inline script code to externally linked script files."
         }
 
-    let scriptViolations html = inlineViolations "(?is)<script.*?>(.+?)</script>" html largeInlineScript
+    let scriptViolations html = inlineViolations Regex.script html largeInlineScript
 
     let manyParamsViolation count =
         {
@@ -297,7 +294,7 @@ module private Utilities =
             Heading = "The title is missing."
             Index = None
             Level = Error
-            Recommendation = "Add the <title> tag inside of the <head> section of the page."
+            Recommendation = "Add the <title> tag inside the <head> section of the page."
         }
 
     let titleEmptyViolation idx =
@@ -341,7 +338,7 @@ module private Utilities =
             Heading = "The title and description are identical."
             Index = None
             Level = Warning
-            Recommendation = "Don't reuse the title in the meta description of the page."
+            Recommendation = "Don't reuse the page's title in the meta description."
         }
 
     let titleViolations html =
@@ -412,12 +409,12 @@ module private Utilities =
         | true -> lineIndex + 1, length' - (length'' - index) + 1
 
     let violation lines (violationPrivate:ViolationPrivate) =
-        let indexPosition' = indexPosition lines
+        let indexPosition' = indexPosition lines 0 0
         let position =
             match violationPrivate.Index with
             | None -> None
             | Some index ->
-                let line, column = indexPosition' 0 0 index
+                let line, column = indexPosition' index
                 Some <| Position.New line column
         {
             Category = violationPrivate.Category
@@ -429,6 +426,9 @@ module private Utilities =
             Recommendation = violationPrivate.Recommendation
         }
 
+/// <summary>Reviews a HTML document for markup related violations.</summary>
+/// <param name="html">The HTML document.</param>
+/// <param name="uri">The HTML document's URI.</param>
 let review (html:string) uri =
     let lines = html.Split '\n'
     [

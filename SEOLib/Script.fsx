@@ -1,19 +1,18 @@
-﻿#r @"..\packages\Google.Apis.Pagespeedonline.v1.1.8.1.380\lib\portable-net4+sl4+wp71+win8\Google.Apis.Pagespeedonline.v1.dll"
-#r @"..\packages\Newtonsoft.Json.6.0.1\lib\net40\Newtonsoft.Json.dll"
-#r @"..\packages\Microsoft.Net.Http.2.2.18\lib\net40\System.Net.Http.Primitives.dll"
+﻿#r @"..\packages\Google.Apis.Pagespeedonline.v1.1.8.1.390\lib\portable-net4+sl4+wp71+win8\Google.Apis.Pagespeedonline.v1.dll"
+#r @"..\packages\Newtonsoft.Json.6.0.2\lib\net40\Newtonsoft.Json.dll"
+#r @"..\packages\Microsoft.Net.Http.2.2.19\lib\net40\System.Net.Http.Primitives.dll"
 #r @"..\SEOLib\bin\Release\SEOLib.dll"
 
 open SEOLib
 open System
-open System.Net
-open System.Text
 
-let requestUri = Uri "https://github.com/"
+let requestUri = Uri "http://fsharp.org"
 
-let html =
-    use client = new WebClient()
-    client.Encoding <- Encoding.UTF8
-    client.DownloadString requestUri
+let httpInfo =
+    Http.getAsync requestUri
+    |> Async.RunSynchronously
+
+let html = httpInfo.Value.Html.Value
 
 //============
 // Html module
@@ -66,22 +65,13 @@ let threeKeywords = printKeywordsData' 3
 let violations = Violations.review html requestUri
 
 //=================
-// Validator module
-//=================
-
-let status =
-    Validator.isValid "http://www.websharper.com/home"
-    |> Async.RunSynchronously
-
-let validationResult = Validator.validateUri "http://www.websharper.com/home"
-
-//=================
 // PageSpeed module
 //=================
 
-let speedService = PageSpeed.SpeedService "API Key"
+let speedService = PageSpeed.SpeedService ""
+
+//speedService.Strategy <- PageSpeed.SpeedStrategy.Mobile
 
 let speedReview =
-    speedService.Review "http://fssnip.net"
+    speedService.Review "http://fsharp.org"
     |> Async.RunSynchronously
-

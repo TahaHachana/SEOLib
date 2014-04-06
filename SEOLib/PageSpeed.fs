@@ -14,7 +14,7 @@ open Google.Apis.Pagespeedonline.v1
 open System
 open System.Text.RegularExpressions
 
-type PageSpeedRule =
+type SpeedRule =
     {
         Name : string
         Impact : float
@@ -31,32 +31,54 @@ type PageSpeedRule =
 and RuleDetails =
     {
         Header : string
+        Hyperlink : string option
         Urls : string list
     }
 
-    static member New header urls =
+    static member New header hyperlink urls =
         {
             Header = header
+            Hyperlink = hyperlink
             Urls = urls
         }
+
+type SpeedStats =
+    {
+        CssBytes : int64
+        FlashBytes : int64
+        HtmlBytes : int64
+        ImageBytes : int64
+        JavaScriptBytes : int64
+        OtherBytes : int64
+        TextBytes : int64
+        RequestBytes : int64
+        CssResources : int
+        Hosts : int
+        JsResources : int
+        StaticResources : int
+        TotalResources : int
+    }
+
+type SpeedStrategy = Desktop | Mobile
 
 [<AutoOpen>]
 module private Utils =
 
-    let placeholderRegex = Regex("\$\d+", RegexOptions.Compiled)
+    let printArgs format (args:string list) =
+        let rec f format index =
+            let argRegex = Regex("\$" + string index)
+            match args.Length with
+            | x when x = index -> argRegex.Replace(format, args.[index - 1])
+            | _ ->
+                let format' = argRegex.Replace(format, args.[index - 1])
+                f format' (index + 1)
+        f format 1
 
-    let rec updateString input (lst:string list) index =
-        match lst with
-        | head :: tail ->
-            let input' = placeholderRegex.Replace(input, head, 1)
-            updateString input' tail (index + 1)
-        | [] -> input
+    type private UrlBlock = Data.Result.FormattedResultsData.RuleResultsDataElement.UrlBlocksData
 
-    type UrlBlock = Data.Result.FormattedResultsData.RuleResultsDataElement.UrlBlocksData
+    type private UrlData = UrlBlock.UrlsData
 
-    type UrlData = UrlBlock.UrlsData
-
-    type ArgData = UrlData.ResultData.ArgsData
+    type private ArgData = UrlData.ResultData.ArgsData
 
     let argsList (args:ArgData seq) =
         args
@@ -69,16 +91,16 @@ module private Utils =
         let format = result.Format
         match args with
         | null -> format
-        | _ -> updateString format (argsList args) 0
+        | _ -> printArgs format (argsList args)
 
-    type UrlBlockArg = UrlBlock.HeaderData.ArgsData
+    type private UrlBlockArg = UrlBlock.HeaderData.ArgsData
 
     let urlBlockHeader (args:UrlBlockArg seq) format =
         let args' =
             args 
             |> Seq.toList
             |> List.map (fun x -> x.Value)
-        updateString format args' 0
+        printArgs format args'
 
     let urlBlockUrls (urlBlock:UrlBlock) =
         match urlBlock.Urls with
@@ -92,64 +114,103 @@ module private Utils =
         let header = urlBlock.Header
         let args = header.Args
         let format = header.Format
-        let header =
+        let header, hyperlink =
             match args with
-            | null -> format
-            | _ -> urlBlockHeader args format
-        RuleDetails.New header <| urlBlockUrls urlBlock
+            | null -> format, None
+            | _ ->
+                let hyperlink =
+                    args
+                    |> Seq.tryFind (fun x -> x.Type = "HYPERLINK")
+                    |> function
+                    | None -> None
+                    | Some x -> Some x.Value
+                urlBlockHeader args format, hyperlink
+        RuleDetails.New header hyperlink <| urlBlockUrls urlBlock
 
     let pageSpeedRules (result:Data.Result) =
         result.FormattedResults.RuleResults.Values
-        |> Seq.map (fun rule ->
+        |> Seq.toList
+        |> List.map (fun rule ->
             let name = rule.LocalizedRuleName
-            let impact = rule.RuleImpact.Value
+            let impact = rule.RuleImpact.GetValueOrDefault()            
             let details =
                 rule.UrlBlocks
                 |> Seq.map formatUrlBlock
                 |> Seq.toList
-            PageSpeedRule.New name impact details)
-        |> Seq.toList
+            SpeedRule.New name impact details)
 
-type PageStats = Data.Result.PageStatsData
+    let pageStats (result:Data.Result) =
+        let stats  = result.PageStats
+        {
+            CssBytes = stats.CssResponseBytes.GetValueOrDefault()
+            FlashBytes = stats.FlashResponseBytes.GetValueOrDefault()
+            HtmlBytes = stats.HtmlResponseBytes.GetValueOrDefault()
+            ImageBytes = stats.ImageResponseBytes.GetValueOrDefault()
+            JavaScriptBytes = stats.JavascriptResponseBytes.GetValueOrDefault()
+            OtherBytes = stats.OtherResponseBytes.GetValueOrDefault()
+            TextBytes = stats.TextResponseBytes.GetValueOrDefault()
+            RequestBytes = stats.TotalRequestBytes.GetValueOrDefault()
+            CssResources = stats.NumberCssResources.GetValueOrDefault()
+            Hosts = stats.NumberHosts.GetValueOrDefault()
+            JsResources = stats.NumberJsResources.GetValueOrDefault()
+            StaticResources = stats.NumberStaticResources.GetValueOrDefault()
+            TotalResources = stats.NumberResources.GetValueOrDefault()
+        }
 
-type PageSpeedReview =
+    type private Strategy = PagespeedapiResource.RunpagespeedRequest.StrategyEnum
+
+    let speedStrategy =
+        function
+        | Desktop -> Nullable Strategy.Desktop
+        | Mobile -> Nullable Strategy.Mobile
+
+    let screenshotData (result:Data.Result) =
+        result.Screenshot.Data
+        |> fun x -> Regex("_").Replace(x, "/")
+        |> fun x -> Regex("-").Replace(x, "+")
+        |> fun x -> "data:image/jpeg;base64," + x
+
+type SpeedReview =
     {
         Uri : string
         Score : int
         Screenshot : string
-        Rules : PageSpeedRule list
-        Stats : PageStats
+        Rules : SpeedRule list
+        Stats : SpeedStats
     }
 
-    static member New uri score screenshot rules stats =
+    static member New uri score screenshot rules speedStats =
         {
             Uri = uri
             Score = score
             Screenshot = screenshot
             Rules = rules
-            Stats = stats
+            Stats = speedStats
         }
 
 type SpeedService(apiKey) =
 
+    let mutable strategy = Desktop
     let initializer = new BaseClientService.Initializer(ApiKey=apiKey)
     let service = new PagespeedonlineService(initializer)
 
+    /// Gets or sets the speed analysis strategy to use.
+    member __.Strategy
+        with get() = strategy
+        and set newStrategy = strategy <- newStrategy 
+
+    /// Runs page speed analysis on the page at the specified URI.
     member __.Review uriString =
         async {
             try
                 let pagespeedRequest = service.Pagespeedapi.Runpagespeed uriString
-                pagespeedRequest.Strategy <- Nullable PagespeedapiResource.RunpagespeedRequest.StrategyEnum.Desktop
+                pagespeedRequest.Strategy <- speedStrategy strategy
                 pagespeedRequest.Screenshot <- Nullable true
-                let! result = pagespeedRequest.ExecuteAsync() |> Async.AwaitTask
-                let score = int result.Score
-                let screenshot =
-                    result.Screenshot.Data
-                    |> fun x -> Regex("_").Replace(x, "/")
-                    |> fun x -> Regex("-").Replace(x, "+")
-                    |> fun x -> "data:image/jpeg;base64," + x
+                let! result = Async.AwaitTask <| pagespeedRequest.ExecuteAsync()
+                let screenshot = screenshotData result
                 let rules = pageSpeedRules result
-                let review = PageSpeedReview.New result.Id score screenshot rules result.PageStats
+                let stats = pageStats result
+                let review = SpeedReview.New result.Id (int result.Score) screenshot rules stats
                 return Some review
             with _ -> return None
         }

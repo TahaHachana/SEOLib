@@ -4,10 +4,10 @@ open System.Reflection
 
 [<
     AssemblyDescription("SEO library.");
-    AssemblyFileVersion("0.6.7");
+    AssemblyFileVersion("0.7.0");
     AssemblyProduct("SEOLib");
     AssemblyTitle("SEOLib");
-    AssemblyVersion("0.6.7")
+    AssemblyVersion("0.7.0")
 >]
 
 ()

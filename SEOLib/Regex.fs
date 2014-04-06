@@ -4,6 +4,8 @@ open System.Text.RegularExpressions
 
 let private compile pattern = Regex(pattern, RegexOptions.Compiled)
 
+let altAttr = compile "(?i)alt=(\"|')(.+?)(\"|')"
+
 let ``base`` = compile "(?is)<base.+?>"
 
 let comment = compile "(?s)<!--.*?--\s*>"
@@ -38,9 +40,13 @@ let oneWord = compile @"\b\w+\b"
 
 let relAttr = compile "rel=(\"|')(.+?)(\"|')"
 
+let script = compile "(?is)<script ?[^>]*?>(.*?)</script>"
+
 let scriptCss = compile "(?is)(<script.*?</script>|<style.*?</style>)"
 
 let space = compile " {2,}"
+
+let style = compile "(?is)<style ?[^>]*?>(.*?)</style>"
 
 let tag = compile "(?s)<.+?>"
 
@@ -53,6 +59,3 @@ let twoWords = compile @"\b\w+\b \b\w+\b"
 let uri = compile "(?i)^https?://[^\"]*"
 
 let uriParam = compile "(\?|&)[^=]+"
-
-
-
