@@ -1,12 +1,12 @@
-﻿#r @"..\packages\Google.Apis.Pagespeedonline.v1.1.8.1.390\lib\portable-net4+sl4+wp71+win8\Google.Apis.Pagespeedonline.v1.dll"
-#r @"..\packages\Newtonsoft.Json.6.0.2\lib\net40\Newtonsoft.Json.dll"
-#r @"..\packages\Microsoft.Net.Http.2.2.19\lib\net40\System.Net.Http.Primitives.dll"
+﻿#r @"..\packages\Google.Apis.Pagespeedonline.v1.1.9.0.540\lib\portable-net40+sl50+win+wpa81+wp80\Google.Apis.Pagespeedonline.v1.dll"
+#r @"..\packages\Newtonsoft.Json.6.0.4\lib\net40\Newtonsoft.Json.dll"
+#r @"..\packages\Microsoft.Net.Http.2.2.22\lib\net40\System.Net.Http.Primitives.dll"
 #r @"..\SEOLib\bin\Release\SEOLib.dll"
 
 open SEOLib
 open System
 
-let requestUri = Uri "http://fsharp.org"
+let requestUri = Uri "http://fsharp.org/testimonials/"
 
 let httpInfo =
     Http.getAsync requestUri

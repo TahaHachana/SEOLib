@@ -1,4 +1,4 @@
-﻿module internal SEOLib.Regex
+﻿module Regex
 
 open System.Text.RegularExpressions
 
@@ -18,7 +18,8 @@ let h1 = compile "(?is)<h1[^>]*?>(.+?)</h1>"
 
 let heading = compile "(?is)<h([1-6])[^>]*?>(.+?)</h[1-6]>"
 
-let href = compile "(?i) href\\s*=\\s*(\"|')/?((?!#.*|/\B|mailto:|location\.|javascript:)[^\"'\#]+)(\"|'|\#)"
+//old pattern: "(?i) href\\s*=\\s*(\"|')/?((?!#.*|/\B|mailto:|location\.|javascript:)[^\"'\#]+)(\"|'|\#)"
+let href = compile "(?i) href\\s*=\\s*(\"|')((?!/\B|mailto:|location\.|javascript:)[^\"']+)(\"|'|)"
 
 let httpEquivAttr = compile "(?i)http-equiv=(\"|')([^\"']+)(\"|')"
 

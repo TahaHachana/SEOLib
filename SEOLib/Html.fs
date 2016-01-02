@@ -112,7 +112,7 @@ module private Utils =
         |> Seq.cast<Match>
         |> Seq.toList
         |> List.map (fun linkMatch ->
-            let openTag = linkMatch.Groups.[1].Value
+            let openTag = linkMatch.Groups.[1].Value            
             let href = Regex.href.Match(openTag).Groups.[2].Value
             let linkAnchor = anchor linkMatch
             let follow =
@@ -232,8 +232,8 @@ let hyperlinks html uri =
             let isUri, result = Uri.TryCreate(href, UriKind.Absolute)
             isUri, result, anchor, rel)
         |> List.filter (fun (isUri, _, _, _) -> isUri)
-        |> List.map (fun (isUri, result, anchor, follow) ->
-            result, anchor, follow)
+        |> List.map (fun (_, result, anchor, follow) ->
+            result, anchor, follow)    
     absolute'
     |> List.append <| toAbsolute relative baseUri
     |> Seq.distinctBy (fun (x, _, _) -> x)

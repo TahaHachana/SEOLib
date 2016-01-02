@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>SEOLib</id>
+    <version>0.7.1</version>
+    <authors>Taha Hachana</authors>
+    <owners>Taha Hachana</owners>
+    <licenseUrl>https://github.com/TahaHachana/SEOLib</licenseUrl>
+    <projectUrl>https://github.com/TahaHachana/SEOLib</projectUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>SEO library, a demo application is available at http://openseo.apphb.com.</description>
+    <releaseNotes>Fix links extraction.</releaseNotes>
+    <copyright></copyright>
+    <tags>SEO F# FSHARP</tags>
+    <dependencies>
+      <dependency id="Google.Apis" version="1.9.0" />
+      <dependency id="Google.Apis.Core" version="1.9.0" />
+      <dependency id="Google.Apis.Pagespeedonline.v1" version="1.9.0.540" />
+      <dependency id="log4net" version="2.0.3" />
+      <dependency id="Microsoft.Bcl" version="1.1.9" />
+      <dependency id="Microsoft.Bcl.Async" version="1.0.168" />
+      <dependency id="Microsoft.Bcl.Build" version="1.0.14" />
+      <dependency id="Microsoft.Net.Http" version="2.2.22" />
+      <dependency id="Newtonsoft.Json" version="6.0.4" />
+      <dependency id="Zlib.Portable" version="1.10.0" />
+    </dependencies>
+  </metadata>
+</package>
